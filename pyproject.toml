@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+packages = ["src/x_twitter_mcp"]
+
+[project]
+name = "x-twitter-mcp"
+version = "0.1.4"
+description = "Twitter search tool for FastMCP using Tweepy"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Rafal Janicki", email = "rafal@kult.io" }
+]
+dependencies = [
+    "fastmcp>=2.2.0",
+    "tweepy>=4.15.0",
+    "python-dotenv>=0.21.0"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/rafaljanicki/x-twitter-mcp-server"
+Issues = "https://github.com/rafaljanicki/x-twitter-mcp-server/issues"
+
+[project.scripts]
+x-twitter-mcp-server = "x_twitter_mcp:server.run"

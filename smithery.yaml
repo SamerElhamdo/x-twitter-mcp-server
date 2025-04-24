@@ -1,0 +1,35 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - twitterApiKey
+      - twitterApiSecret
+      - twitterAccessToken
+      - twitterAccessTokenSecret
+    properties:
+      twitterApiKey:
+        type: string
+        description: Twitter API Key for authentication.
+      twitterApiSecret:
+        type: string
+        description: Twitter API Secret for authentication.
+      twitterAccessToken:
+        type: string
+        description: Twitter Access Token for authentication.
+      twitterAccessTokenSecret:
+        type: string
+        description: Twitter Access Token Secret for authentication.
+  commandFunction: |
+    (config) => ({
+      "command": "python",
+      "args": ["/app/src/x_twitter_mcp/server.py"],
+      "env": {
+        "TWITTER_API_KEY": config.twitterApiKey,
+        "TWITTER_API_SECRET": config.twitterApiSecret,
+        "TWITTER_ACCESS_TOKEN": config.twitterAccessToken,
+        "TWITTER_ACCESS_TOKEN_SECRET": config.twitterAccessTokenSecret
+      }
+    })
