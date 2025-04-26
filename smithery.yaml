@@ -9,6 +9,7 @@ startCommand:
       - twitterApiSecret
       - twitterAccessToken
       - twitterAccessTokenSecret
+      - twitterBearerToken
     properties:
       twitterApiKey:
         type: string
@@ -22,6 +23,9 @@ startCommand:
       twitterAccessTokenSecret:
         type: string
         description: Twitter Access Token Secret for authentication.
+      twitterBearerToken:
+        type: string
+        description: Twitter Bearer Token for authentication.
   commandFunction: |
     (config) => ({
       "command": "python",
@@ -30,6 +34,7 @@ startCommand:
         "TWITTER_API_KEY": config.twitterApiKey,
         "TWITTER_API_SECRET": config.twitterApiSecret,
         "TWITTER_ACCESS_TOKEN": config.twitterAccessToken,
-        "TWITTER_ACCESS_TOKEN_SECRET": config.twitterAccessTokenSecret
+        "TWITTER_ACCESS_TOKEN_SECRET": config.twitterAccessTokenSecret,
+        "TWITTER_BEARER_TOKEN": config.twitterBearerToken
       }
     })

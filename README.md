@@ -210,6 +210,200 @@ You can now interact with Twitter using natural language in Claude Desktop. Here
 
 When prompted, grant Claude permission to use the MCP tools for the chat session.
 
+## Available Tools
+
+Below is a list of all tools provided by the `x-twitter-mcp` server, along with example executions in Claude Desktop using natural language prompts.
+
+### User Management Tools
+
+#### `get_user_profile`
+- **Description**: Get detailed profile information for a user.
+- **Claude Desktop Example**:
+  ```
+  Get the Twitter profile for user ID 123456789.
+  ```
+  Claude will return the user’s profile details, including ID, name, username, profile image URL, and description.
+
+#### `get_user_by_screen_name`
+- **Description**: Fetches a user by screen name.
+- **Claude Desktop Example**:
+  ```
+  Get the Twitter user with screen name "example_user".
+  ```
+  Claude will return the user’s profile details.
+
+#### `get_user_by_id`
+- **Description**: Fetches a user by ID.
+- **Claude Desktop Example**:
+  ```
+  Fetch the Twitter user with ID 987654321.
+  ```
+  Claude will return the user’s profile details.
+
+#### `get_user_followers`
+- **Description**: Retrieves a list of followers for a given user.
+- **Claude Desktop Example**:
+  ```
+  Get the followers of user ID 123456789, limit to 50.
+  ```
+  Claude will return a list of up to 50 followers.
+
+#### `get_user_following`
+- **Description**: Retrieves users the given user is following.
+- **Claude Desktop Example**:
+  ```
+  Who is user ID 123456789 following? Limit to 50 users.
+  ```
+  Claude will return a list of up to 50 users.
+
+#### `get_user_followers_you_know`
+- **Description**: Retrieves a list of common followers.
+- **Claude Desktop Example**:
+  ```
+  Get common followers for user ID 123456789, limit to 50.
+  ```
+  Claude will return a list of up to 50 common followers (simulated by filtering followers).
+
+#### `get_user_subscriptions`
+- **Description**: Retrieves a list of users to which the specified user is subscribed.
+- **Claude Desktop Example**:
+  ```
+  Get the subscriptions for user ID 123456789, limit to 50.
+  ```
+  Claude will return a list of up to 50 users (using following as a proxy for subscriptions).
+
+### Tweet Management Tools
+
+#### `post_tweet`
+- **Description**: Post a tweet with optional media, reply, and tags.
+- **Claude Desktop Example**:
+  ```
+  Post a tweet saying "Hello from Claude Desktop! #MCP"
+  ```
+  Claude will post the tweet and return the tweet details.
+
+#### `delete_tweet`
+- **Description**: Delete a tweet by its ID.
+- **Claude Desktop Example**:
+  ```
+  Delete the tweet with ID 123456789012345678.
+  ```
+  Claude will delete the tweet and confirm the action.
+
+#### `get_tweet_details`
+- **Description**: Get detailed information about a specific tweet.
+- **Claude Desktop Example**:
+  ```
+  Get details for tweet ID 123456789012345678.
+  ```
+  Claude will return the tweet’s details, including ID, text, creation date, and author ID.
+
+#### `create_poll_tweet`
+- **Description**: Create a tweet with a poll.
+- **Claude Desktop Example**:
+  ```
+  Create a poll tweet with the question "What's your favorite color?" and options "Red", "Blue", "Green" for 60 minutes.
+  ```
+  Claude will create the poll tweet and return the tweet details.
+
+#### `vote_on_poll`
+- **Description**: Vote on a poll.
+- **Claude Desktop Example**:
+  ```
+  Vote "Blue" on the poll in tweet ID 123456789012345678.
+  ```
+  Claude will return a mock response (since Twitter API v2 doesn’t support poll voting).
+
+#### `favorite_tweet`
+- **Description**: Favorites a tweet.
+- **Claude Desktop Example**:
+  ```
+  Like the tweet with ID 123456789012345678.
+  ```
+  Claude will favorite the tweet and confirm the action.
+
+#### `unfavorite_tweet`
+- **Description**: Unfavorites a tweet.
+- **Claude Desktop Example**:
+  ```
+  Unlike the tweet with ID 123456789012345678.
+  ```
+  Claude will unfavorite the tweet and confirm the action.
+
+#### `bookmark_tweet`
+- **Description**: Adds the tweet to bookmarks.
+- **Claude Desktop Example**:
+  ```
+  Bookmark the tweet with ID 123456789012345678.
+  ```
+  Claude will bookmark the tweet and confirm the action.
+
+#### `delete_bookmark`
+- **Description**: Removes the tweet from bookmarks.
+- **Claude Desktop Example**:
+  ```
+  Remove the bookmark for tweet ID 123456789012345678.
+  ```
+  Claude will remove the bookmark and confirm the action.
+
+#### `delete_all_bookmarks`
+- **Description**: Deletes all bookmarks.
+- **Claude Desktop Example**:
+  ```
+  Delete all my Twitter bookmarks.
+  ```
+  Claude will delete all bookmarks and confirm the action.
+
+### Timeline & Search Tools
+
+#### `get_timeline`
+- **Description**: Get tweets from your home timeline (For You).
+- **Claude Desktop Example**:
+  ```
+  Show my Twitter For You timeline, limit to 20 tweets.
+  ```
+  Claude will return up to 20 tweets from your For You timeline.
+
+#### `get_latest_timeline`
+- **Description**: Get tweets from your home timeline (Following).
+- **Claude Desktop Example**:
+  ```
+  Show my Twitter Following timeline, limit to 20 tweets.
+  ```
+  Claude will return up to 20 tweets from your Following timeline.
+
+#### `search_twitter`
+- **Description**: Search Twitter with a query.
+- **Claude Desktop Example**:
+  ```
+  Search Twitter for recent tweets about AI, limit to 10.
+  ```
+  Claude will return up to 10 recent tweets about AI.
+
+#### `get_trends`
+- **Description**: Retrieves trending topics on Twitter.
+- **Claude Desktop Example**:
+  ```
+  What are the current trending topics on Twitter? Limit to 10.
+  ```
+  Claude will return up to 10 trending topics.
+
+#### `get_highlights_tweets`
+- **Description**: Retrieves highlighted tweets from a user’s timeline.
+- **Claude Desktop Example**:
+  ```
+  Get highlighted tweets from user ID 123456789, limit to 20.
+  ```
+  Claude will return up to 20 tweets from the user’s timeline (simulated as highlights).
+
+#### `get_user_mentions`
+- **Description**: Get tweets mentioning a specific user.
+- **Claude Desktop Example**:
+  ```
+  Get tweets mentioning user ID 123456789, limit to 20.
+  ```
+  Claude will return up to 20 tweets mentioning the user.
+
 ## Troubleshooting
 
 - **Server Not Starting**:

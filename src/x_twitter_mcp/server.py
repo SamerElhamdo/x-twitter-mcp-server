@@ -38,6 +38,7 @@ def initialize_twitter_clients() -> tuple[tweepy.Client, tweepy.API]:
         "TWITTER_API_SECRET",
         "TWITTER_ACCESS_TOKEN",
         "TWITTER_ACCESS_TOKEN_SECRET",
+        "TWITTER_BEARER_TOKEN",
     ]
     for var in required_env_vars:
         if not os.getenv(var):
@@ -48,7 +49,8 @@ def initialize_twitter_clients() -> tuple[tweepy.Client, tweepy.API]:
         consumer_key=os.getenv("TWITTER_API_KEY"),
         consumer_secret=os.getenv("TWITTER_API_SECRET"),
         access_token=os.getenv("TWITTER_ACCESS_TOKEN"),
-        access_token_secret=os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
+        access_token_secret=os.getenv("TWITTER_ACCESS_TOKEN_SECRET"),
+        bearer_token=os.getenv("TWITTER_BEARER_TOKEN")
     )
 
     # Initialize v1.1 API for media uploads and other unsupported v2 endpoints
