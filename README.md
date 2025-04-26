@@ -30,7 +30,7 @@ A Model Context Protocol (MCP) server for interacting with Twitter (X) via AI to
 To install X (Twitter) MCP server for Claude Desktop automatically via [Smithery](https://smithery.ai/server//x-twitter-mcp-server):
 
 ```bash
-npx -y @smithery/cli install /x-twitter-mcp-server --client claude
+npx -y @smithery/cli install @rafaljanicki/x-twitter-mcp-server --client claude
 ```
 
 ### Option 2: Install from PyPI
