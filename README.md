@@ -5,6 +5,10 @@
 
 A Model Context Protocol (MCP) server for interacting with Twitter (X) via AI tools. This server allows you to fetch tweets, post tweets, search Twitter, manage followers, and more, all through natural language commands in AI Tools.
 
+<a href="https://glama.ai/mcp/servers/@rafaljanicki/x-twitter-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@rafaljanicki/x-twitter-mcp-server/badge" alt="X (Twitter) server MCP server" />
+</a>
+
 ## Features
 
 - Fetch user profiles, followers, and following lists.
