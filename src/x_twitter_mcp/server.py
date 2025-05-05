@@ -169,7 +169,8 @@ async def post_tweet(text: str, media_paths: Optional[List[str]] = None, reply_t
             media_ids.append(media.media_id_string)
         tweet_data["media_ids"] = media_ids
     tweet = client.create_tweet(**tweet_data)
-    return tweet.data.data
+    logger.info(f"Response from client.create_tweet: {tweet}")
+    return tweet.get("data", {})
 
 @server.tool(name="delete_tweet", description="Delete a tweet by its ID")
 async def delete_tweet(tweet_id: str) -> Dict:
@@ -291,7 +292,7 @@ async def get_trends(category: Optional[str] = None, count: Optional[int] = 50) 
         trends = [t for t in trends if t.get("category") == category]
     return trends[:count]
 
-@server.tool(name="get_highlights_tweets", description="Retrieves highlighted tweets from a user’s timeline")
+@server.tool(name="get_highlights_tweets", description="Retrieves highlighted tweets from a user's timeline")
 async def get_highlights_tweets(user_id: str, count: Optional[int] = 100, cursor: Optional[str] = None) -> List[Dict]:
     """Fetches highlighted tweets."""
     client, _ = initialize_twitter_clients()
