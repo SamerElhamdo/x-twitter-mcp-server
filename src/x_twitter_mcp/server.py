@@ -169,8 +169,8 @@ async def post_tweet(text: str, media_paths: Optional[List[str]] = None, reply_t
             media_ids.append(media.media_id_string)
         tweet_data["media_ids"] = media_ids
     tweet = client.create_tweet(**tweet_data)
-    logger.info(f"Response from client.create_tweet: {tweet}")
-    return tweet.get("data", {})
+    logger.info(f"Type of response from client.create_tweet: {type(tweet)}; Content: {tweet}")
+    return tweet.data
 
 @server.tool(name="delete_tweet", description="Delete a tweet by its ID")
 async def delete_tweet(tweet_id: str) -> Dict:
