@@ -96,21 +96,21 @@ async def get_user_profile(user_id: str) -> Dict:
     """Fetches user profile by user ID."""
     client, _ = initialize_twitter_clients()
     user = client.get_user(id=user_id, user_fields=["id", "name", "username", "profile_image_url", "description"])
-    return user.data.data
+    return user.data
 
 @server.tool(name="get_user_by_screen_name", description="Fetches a user by screen name")
 async def get_user_by_screen_name(screen_name: str) -> Dict:
     """Fetches user by screen name."""
     client, _ = initialize_twitter_clients()
     user = client.get_user(username=screen_name, user_fields=["id", "name", "username", "profile_image_url", "description"])
-    return user.data.data
+    return user.data
 
 @server.tool(name="get_user_by_id", description="Fetches a user by ID")
 async def get_user_by_id(user_id: str) -> Dict:
     """Fetches user by ID."""
     client, _ = initialize_twitter_clients()
     user = client.get_user(id=user_id, user_fields=["id", "name", "username", "profile_image_url", "description"])
-    return user.data.data
+    return user.data
 
 @server.tool(name="get_user_followers", description="Retrieves a list of followers for a given user")
 async def get_user_followers(user_id: str, count: Optional[int] = 100, cursor: Optional[str] = None) -> List[Dict]:
@@ -159,7 +159,7 @@ async def post_tweet(text: str, media_paths: Optional[List[str]] = None, reply_t
     client, v1_api = initialize_twitter_clients()
     tweet_data = {"text": text}
     if reply_to:
-        tweet_data["in_reply_to_status_id"] = reply_to
+        tweet_data["reply"] = {"in_reply_to_tweet_id": reply_to}
     if tags:
         tweet_data["text"] += " " + " ".join(f"#{tag}" for tag in tags)
     if media_paths:
@@ -186,7 +186,7 @@ async def get_tweet_details(tweet_id: str) -> Dict:
     """Fetches tweet details."""
     client, _ = initialize_twitter_clients()
     tweet = client.get_tweet(id=tweet_id, tweet_fields=["id", "text", "created_at", "author_id"])
-    return tweet.data.data
+    return tweet.data
 
 @server.tool(name="create_poll_tweet", description="Create a tweet with a poll")
 async def create_poll_tweet(text: str, choices: List[str], duration_minutes: int) -> Dict:
@@ -200,7 +200,7 @@ async def create_poll_tweet(text: str, choices: List[str], duration_minutes: int
         "poll_duration_minutes": duration_minutes
     }
     tweet = client.create_tweet(**poll_data)
-    return tweet.data.data
+    return tweet.data
 
 @server.tool(name="vote_on_poll", description="Vote on a poll")
 async def vote_on_poll(tweet_id: str, choice: str) -> Dict:
