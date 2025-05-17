@@ -202,7 +202,7 @@ async def post_tweet(text: str, media_paths: Optional[List[str]] = None, reply_t
     client, v1_api = initialize_twitter_clients()
     tweet_data = {"text": text}
     if reply_to:
-        tweet_data["reply"] = {"in_reply_to_tweet_id": reply_to}
+        tweet_data["in_reply_to_tweet_id"] = reply_to
     if tags:
         tweet_data["text"] += " " + " ".join(f"#{tag}" for tag in tags)
     if media_paths:
