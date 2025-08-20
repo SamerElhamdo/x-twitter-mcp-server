@@ -1,8 +1,21 @@
-from . import server
+"""
+X (Twitter) MCP Server with Local Database Authentication
 
-def main():
-    """Main entry point for the package, returns a coroutine to be awaited by the caller."""
-    return server.run()
+A Model Context Protocol (MCP) server for interacting with Twitter (X) via AI tools.
+This server stores Twitter API credentials locally and allows you to use only username
+in your requests for enhanced security and convenience.
 
-# Optionally expose other important items at package level
-__all__ = ['main', 'server']
+Features:
+- Local SQLite database for credential storage
+- Web API interface for account management
+- Username-only authentication for daily use
+- Complete Twitter API v2 implementation
+"""
+
+__version__ = "0.2.0"
+__author__ = "Rafal Janicki"
+__email__ = "rafal@kult.io"
+
+from .server import run
+
+__all__ = ["run"]

@@ -5,8 +5,8 @@ packages = ["src/x_twitter_mcp"]
 
 [project]
 name = "x-twitter-mcp"
-version = "0.1.12"
-description = "Twitter search tool for FastMCP using Tweepy - requires API credentials in each request"
+version = "0.2.0"
+description = "Twitter MCP server with local database authentication - store credentials once, use username only"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -15,7 +15,11 @@ authors = [
 ]
 dependencies = [
     "fastmcp>=2.2.0",
-    "tweepy>=4.15.0"
+    "tweepy>=4.15.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",

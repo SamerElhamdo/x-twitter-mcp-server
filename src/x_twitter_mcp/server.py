@@ -6,6 +6,8 @@ import tweepy
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
+from database import db_manager
+from auth_api import start_auth_server
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,28 +18,36 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 # Initialize FastMCP server
 server = FastMCP(name="TwitterMCPServer")
 
-def initialize_twitter_clients(api_key: str, api_secret: str, access_token: str, access_token_secret: str, bearer_token: str) -> tuple[tweepy.Client, tweepy.API]:
-    """Initialize Twitter API clients with provided credentials."""
-    
-    # Validate required credentials
-    if not all([api_key, api_secret, access_token, access_token_secret, bearer_token]):
-        raise ValueError("All Twitter API credentials are required: api_key, api_secret, access_token, access_token_secret, bearer_token")
+# بدء تشغيل خادم المصادقة
+auth_server_thread = start_auth_server(host="127.0.0.1", port=8000)
 
+def initialize_twitter_clients(username: str) -> tuple[tweepy.Client, tweepy.API]:
+    """Initialize Twitter API clients using stored credentials."""
+    
+    # الحصول على الحساب من قاعدة البيانات
+    account = db_manager.get_account(username)
+    if not account:
+        raise ValueError(f"الحساب '{username}' غير موجود أو غير نشط. يرجى إضافته أولاً عبر واجهة API المصادقة.")
+    
+    # التحقق من صحة المفاتيح
+    if not db_manager.test_credentials(username):
+        raise ValueError(f"مفاتيح المصادقة للحساب '{username}' غير صحيحة. يرجى تحديثها.")
+    
     # Initialize v2 API client
     twitter_client = tweepy.Client(
-        consumer_key=api_key,
-        consumer_secret=api_secret,
-        access_token=access_token,
-        access_token_secret=access_token_secret,
-        bearer_token=bearer_token
+        consumer_key=account.api_key,
+        consumer_secret=account.api_secret,
+        access_token=account.access_token,
+        access_token_secret=account.access_token_secret,
+        bearer_token=account.bearer_token
     )
 
     # Initialize v1.1 API for media uploads and other unsupported v2 endpoints
     auth = tweepy.OAuth1UserHandler(
-        consumer_key=api_key,
-        consumer_secret=api_secret,
-        access_token=access_token,
-        access_token_secret=access_token_secret
+        consumer_key=account.api_key,
+        consumer_secret=account.api_secret,
+        access_token=account.access_token,
+        access_token_secret=account.access_token_secret
     )
     twitter_v1_api = tweepy.API(auth)
 
@@ -69,84 +79,155 @@ def check_rate_limit(action_type: str) -> bool:
     counter["count"] += 1
     return True
 
-# User Management Tools
-@server.tool(name="get_user_profile", description="Get detailed profile information for a user")
-async def get_user_profile(
-    user_id: str,
+# Account Management Tools
+@server.tool(name="add_twitter_account", description="Add a new Twitter account to the database")
+async def add_twitter_account(
+    username: str,
     api_key: str,
     api_secret: str,
     access_token: str,
     access_token_secret: str,
-    bearer_token: str
+    bearer_token: str,
+    display_name: Optional[str] = None
 ) -> Dict:
+    """Add a new Twitter account to the database for future use.
+
+    Args:
+        username (str): Twitter username (without @)
+        api_key (str): Twitter API Key
+        api_secret (str): Twitter API Secret
+        access_token (str): Twitter Access Token
+        access_token_secret (str): Twitter Access Token Secret
+        bearer_token (str): Twitter Bearer Token
+        display_name (Optional[str]): Display name for the account
+    """
+    try:
+        success = db_manager.add_account(
+            username=username,
+            api_key=api_key,
+            api_secret=api_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret,
+            bearer_token=bearer_token,
+            display_name=display_name
+        )
+        
+        if success:
+            # اختبار المفاتيح
+            is_valid = db_manager.test_credentials(username)
+            return {
+                "success": True,
+                "message": f"تم إضافة الحساب '{username}' بنجاح",
+                "credentials_valid": is_valid,
+                "note": "يمكنك الآن استخدام username فقط في الطلبات المستقبلية"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "فشل في إضافة الحساب"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"خطأ: {str(e)}"
+        }
+
+@server.tool(name="list_twitter_accounts", description="List all stored Twitter accounts")
+async def list_twitter_accounts() -> List[Dict]:
+    """List all Twitter accounts stored in the database."""
+    try:
+        accounts = db_manager.get_all_accounts()
+        return [account.to_dict() for account in accounts]
+    except Exception as e:
+        return [{"error": f"خطأ في الحصول على الحسابات: {str(e)}"}]
+
+@server.tool(name="test_twitter_account", description="Test if a Twitter account credentials are valid")
+async def test_twitter_account(username: str) -> Dict:
+    """Test if the stored credentials for a Twitter account are valid.
+
+    Args:
+        username (str): Twitter username to test
+    """
+    try:
+        is_valid = db_manager.test_credentials(username)
+        return {
+            "username": username,
+            "credentials_valid": is_valid,
+            "message": "مفاتيح المصادقة صحيحة" if is_valid else "مفاتيح المصادقة غير صحيحة"
+        }
+    except Exception as e:
+        return {
+            "username": username,
+            "credentials_valid": False,
+            "message": f"خطأ في الاختبار: {str(e)}"
+        }
+
+@server.tool(name="remove_twitter_account", description="Remove a Twitter account from the database")
+async def remove_twitter_account(username: str) -> Dict:
+    """Remove a Twitter account from the database.
+
+    Args:
+        username (str): Twitter username to remove
+    """
+    try:
+        success = db_manager.delete_account(username)
+        if success:
+            return {
+                "success": True,
+                "message": f"تم حذف الحساب '{username}' بنجاح"
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"الحساب '{username}' غير موجود"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"خطأ: {str(e)}"
+        }
+
+# User Management Tools
+@server.tool(name="get_user_profile", description="Get detailed profile information for a user")
+async def get_user_profile(user_id: str, username: str) -> Dict:
     """Fetches user profile by user ID.
 
     Args:
         user_id (str): The ID of the user to look up.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     user = client.get_user(id=user_id, user_fields=["id", "name", "username", "profile_image_url", "description"])
     return user.data
 
 @server.tool(name="get_user_by_screen_name", description="Fetches a user by screen name")
-async def get_user_by_screen_name(
-    screen_name: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def get_user_by_screen_name(screen_name: str, username: str) -> Dict:
     """Fetches user by screen name.
 
     Args:
         screen_name (str): The screen name/username of the user.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     user = client.get_user(username=screen_name, user_fields=["id", "name", "username", "profile_image_url", "description"])
     return user.data
 
 @server.tool(name="get_user_by_id", description="Fetches a user by ID")
-async def get_user_by_id(
-    user_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def get_user_by_id(user_id: str, username: str) -> Dict:
     """Fetches user by ID.
 
     Args:
         user_id (str): The ID of the user to look up.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     user = client.get_user(id=user_id, user_fields=["id", "name", "username", "profile_image_url", "description"])
     return user.data
 
 @server.tool(name="get_user_followers", description="Retrieves a list of followers for a given user")
 async def get_user_followers(
     user_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100,
     cursor: Optional[str] = None
 ) -> List[Dict]:
@@ -154,28 +235,20 @@ async def get_user_followers(
 
     Args:
         user_id (str): The user ID whose followers are to be retrieved.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): The number of followers to retrieve per page. Default is 100. Max is 100 for V2 API.
         cursor (Optional[str]): A pagination token for fetching the next set of results.
     """
     if not check_rate_limit("follow_actions"):
         raise Exception("Follow action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     followers = client.get_users_followers(id=user_id, max_results=count, pagination_token=cursor, user_fields=["id", "name", "username"])
     return [user.data for user in followers.data]
 
 @server.tool(name="get_user_following", description="Retrieves users the given user is following")
 async def get_user_following(
     user_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100,
     cursor: Optional[str] = None
 ) -> List[Dict]:
@@ -183,28 +256,20 @@ async def get_user_following(
 
     Args:
         user_id (str): The user ID whose following list is to be retrieved.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): The number of users to retrieve per page. Default is 100. Max is 100 for V2 API.
         cursor (Optional[str]): A pagination token for fetching the next set of results.
     """
     if not check_rate_limit("follow_actions"):
         raise Exception("Follow action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     following = client.get_users_following(id=user_id, max_results=count, pagination_token=cursor, user_fields=["id", "name", "username"])
     return [user.data for user in following.data]
 
 @server.tool(name="get_user_followers_you_know", description="Retrieves a list of common followers (simulated)")
 async def get_user_followers_you_know(
     user_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100,
     cursor: Optional[str] = None
 ) -> List[Dict]:
@@ -212,17 +277,13 @@ async def get_user_followers_you_know(
 
     Args:
         user_id (str): The user ID to check for common followers.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): The number of followers to retrieve and check. Default is 100.
         cursor (Optional[str]): A pagination token for fetching the user's followers.
     """
     if not check_rate_limit("follow_actions"):
         raise Exception("Follow action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     # Simulate by fetching followers and filtering (v2 doesn't directly support mutual followers)
     followers = client.get_users_followers(id=user_id, max_results=count, pagination_token=cursor, user_fields=["id", "name", "username"])
     return [user.data for user in followers.data][:count]
@@ -230,11 +291,7 @@ async def get_user_followers_you_know(
 @server.tool(name="get_user_subscriptions", description="Retrieves a list of users to which the specified user is subscribed (uses following as proxy)")
 async def get_user_subscriptions(
     user_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100,
     cursor: Optional[str] = None
 ) -> List[Dict]:
@@ -242,17 +299,13 @@ async def get_user_subscriptions(
 
     Args:
         user_id (str): The user ID whose subscriptions (following list) are to be retrieved.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): The number of users to retrieve per page. Default is 100.
         cursor (Optional[str]): A pagination token for fetching the next set of results.
     """
     if not check_rate_limit("follow_actions"):
         raise Exception("Follow action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     # Use following as proxy for subscriptions
     subscriptions = client.get_users_following(id=user_id, max_results=count, pagination_token=cursor, user_fields=["id", "name", "username"])
     return [user.data for user in subscriptions.data]
@@ -261,11 +314,7 @@ async def get_user_subscriptions(
 @server.tool(name="post_tweet", description="Post a tweet with optional media, reply, and tags")
 async def post_tweet(
     text: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     media_paths: Optional[List[str]] = None,
     reply_to: Optional[str] = None,
     tags: Optional[List[str]] = None
@@ -274,18 +323,14 @@ async def post_tweet(
 
     Args:
         text (str): The text content of the tweet. Max 280 characters.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         media_paths (Optional[List[str]]): A list of local file paths to media (images, videos) to be uploaded and attached.
         reply_to (Optional[str]): The ID of the tweet to reply to.
         tags (Optional[List[str]]): A list of hashtags (without '#') to append to the tweet.
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
-    client, v1_api = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, v1_api = initialize_twitter_clients(username)
     tweet_data = {"text": text}
     if reply_to:
         tweet_data["in_reply_to_tweet_id"] = reply_to
@@ -302,50 +347,28 @@ async def post_tweet(
     return tweet.data
 
 @server.tool(name="delete_tweet", description="Delete a tweet by its ID")
-async def delete_tweet(
-    tweet_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def delete_tweet(tweet_id: str, username: str) -> Dict:
     """Deletes a tweet.
 
     Args:
         tweet_id (str): The ID of the tweet to delete.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     result = client.delete_tweet(id=tweet_id)
     return {"id": tweet_id, "deleted": result.data["deleted"]}
 
 @server.tool(name="get_tweet_details", description="Get detailed information about a specific tweet")
-async def get_tweet_details(
-    tweet_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def get_tweet_details(tweet_id: str, username: str) -> Dict:
     """Fetches tweet details.
 
     Args:
         tweet_id (str): The ID of the tweet to fetch.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     tweet = client.get_tweet(id=tweet_id, tweet_fields=["id", "text", "created_at", "author_id"])
     return tweet.data
 
@@ -354,11 +377,7 @@ async def create_poll_tweet(
     text: str,
     choices: List[str],
     duration_minutes: int,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
+    username: str
 ) -> Dict:
     """Creates a poll tweet.
 
@@ -366,15 +385,11 @@ async def create_poll_tweet(
         text (str): The question or text for the poll.
         choices (List[str]): A list of poll choices (2-4 choices, each max 25 characters).
         duration_minutes (int): Duration of the poll in minutes (min 5, max 10080 (7 days)).
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     poll_data = {
         "text": text,
         "poll_options": choices,
@@ -384,25 +399,13 @@ async def create_poll_tweet(
     return tweet.data
 
 @server.tool(name="vote_on_poll", description="Vote on a poll (mocked)")
-async def vote_on_poll(
-    tweet_id: str,
-    choice: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def vote_on_poll(tweet_id: str, choice: str, username: str) -> Dict:
     """Votes on a poll. (Note: Twitter API v2 does not support programmatically voting on polls. This is a mock response.)
 
     Args:
         tweet_id (str): The ID of the tweet containing the poll.
         choice (str): The choice to vote for (must exactly match one of the poll options).
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
@@ -410,127 +413,76 @@ async def vote_on_poll(
     return {"tweet_id": tweet_id, "choice": choice, "status": "voted"}
 
 @server.tool(name="favorite_tweet", description="Favorites a tweet")
-async def favorite_tweet(
-    tweet_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def favorite_tweet(tweet_id: str, username: str) -> Dict:
     """Favorites a tweet.
 
     Args:
         tweet_id (str): The ID of the tweet to favorite (like).
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     result = client.like(tweet_id=tweet_id)
     return {"tweet_id": tweet_id, "liked": result.data["liked"]}
 
 @server.tool(name="unfavorite_tweet", description="Unfavorites a tweet")
-async def unfavorite_tweet(
-    tweet_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def unfavorite_tweet(tweet_id: str, username: str) -> Dict:
     """Unfavorites a tweet.
 
     Args:
         tweet_id (str): The ID of the tweet to unfavorite (unlike).
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     result = client.unlike(tweet_id=tweet_id)
     return {"tweet_id": tweet_id, "liked": not result.data["liked"]}
 
 @server.tool(name="bookmark_tweet", description="Adds the tweet to bookmarks")
 async def bookmark_tweet(
     tweet_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     folder_id: Optional[str] = None
 ) -> Dict:
     """Bookmarks a tweet.
 
     Args:
         tweet_id (str): The ID of the tweet to bookmark.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         folder_id (Optional[str]): The ID of the bookmark folder to add the tweet to. (Currently not supported by Tweepy v2 client, will be ignored).
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     result = client.bookmark(tweet_id=tweet_id)
     return {"tweet_id": tweet_id, "bookmarked": result.data["bookmarked"]}
 
 @server.tool(name="delete_bookmark", description="Removes the tweet from bookmarks")
-async def delete_bookmark(
-    tweet_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def delete_bookmark(tweet_id: str, username: str) -> Dict:
     """Removes a bookmark.
 
     Args:
         tweet_id (str): The ID of the tweet to remove from bookmarks.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     result = client.remove_bookmark(tweet_id=tweet_id)
     return {"tweet_id": tweet_id, "bookmarked": not result.data["bookmarked"]}
 
 @server.tool(name="delete_all_bookmarks", description="Deletes all bookmarks (simulated)")
-async def delete_all_bookmarks(
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str
-) -> Dict:
+async def delete_all_bookmarks(username: str) -> Dict:
     """Deletes all bookmarks. (Simulated as Twitter API v2 doesn't have a direct endpoint for this. Fetches all bookmarks and deletes them one by one.)
     
     Args:
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     # Twitter API v2 doesn't have a direct endpoint; simulate by fetching and removing
     bookmarks = client.get_bookmarks()
     for bookmark in bookmarks.data:
@@ -540,11 +492,7 @@ async def delete_all_bookmarks(
 # Timeline & Search Tools
 @server.tool(name="get_timeline", description="Get tweets from your home timeline (For You)")
 async def get_timeline(
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100,
     seen_tweet_ids: Optional[List[str]] = None,
     cursor: Optional[str] = None
@@ -552,50 +500,34 @@ async def get_timeline(
     """Fetches home timeline tweets (typically 'For You' or algorithmically sorted).
 
     Args:
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): Number of tweets to retrieve. Default 100. Min 5, Max 100 for get_home_timeline.
         seen_tweet_ids (Optional[List[str]]): List of tweet IDs already seen by the user, to potentially influence timeline results. (Note: Tweepy's get_home_timeline doesn't directly support this, this arg is for future use or custom logic).
         cursor (Optional[str]): Pagination token for fetching the next set of results.
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     tweets = client.get_home_timeline(max_results=count, pagination_token=cursor, tweet_fields=["id", "text", "created_at"])
     return [tweet.data for tweet in tweets.data]
 
 @server.tool(name="get_latest_timeline", description="Get tweets from your home timeline (Following)")
 async def get_latest_timeline(
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100
 ) -> List[Dict]:
     """Fetches latest timeline tweets (reverse chronological order from accounts the user follows).
 
     Args:
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): Number of tweets to retrieve. Default 100. Min 5, Max 100 for get_home_timeline.
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     tweets = client.get_home_timeline(max_results=count, tweet_fields=["id", "text", "created_at"], exclude=["replies", "retweets"])
     return [tweet.data for tweet in tweets.data]
 
 @server.tool(name="search_twitter", description="Search Twitter with a query")
 async def search_twitter(
     query: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     product: Optional[str] = "Top",
     count: Optional[int] = 100,
     cursor: Optional[str] = None
@@ -604,11 +536,7 @@ async def search_twitter(
 
     Args:
         query (str): The search query. Supports operators like #hashtag, from:user, etc.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         product (Optional[str]): Sorting preference. 'Top' for relevancy (default), 'Latest' for recency.
         count (Optional[int]): Number of tweets to retrieve. Default 100. Min 10, Max 100 for search_recent_tweets.
         cursor (Optional[str]): Pagination token (next_token) for fetching the next set of results.
@@ -627,32 +555,24 @@ async def search_twitter(
     else:
         effective_count = count
         
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     tweets = client.search_recent_tweets(query=query, max_results=effective_count, sort_order=sort_order, next_token=cursor, tweet_fields=["id", "text", "created_at"])
     return [tweet.data for tweet in tweets.data]
 
 @server.tool(name="get_trends", description="Retrieves trending topics on Twitter")
 async def get_trends(
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     category: Optional[str] = None,
     count: Optional[int] = 50
 ) -> List[Dict]:
     """Fetches trending topics (uses Twitter API v1.1 as v2 trends require specific location WOEID).
 
     Args:
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         category (Optional[str]): Filter trends by category (e.g., 'Sports', 'News'). Currently not directly supported by `get_place_trends` for worldwide, will filter locally if provided.
         count (Optional[int]): Number of trending topics to retrieve. Default 50. Max 50 (as per Twitter API v1.1 default).
     """
-    _, v1_api = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    _, v1_api = initialize_twitter_clients(username)
     # Twitter API v2 trends require a location; use v1.1 for trends
     trends = v1_api.get_place_trends(id=1)  # WOEID 1 = Worldwide
     trends = trends[0]["trends"]
@@ -663,11 +583,7 @@ async def get_trends(
 @server.tool(name="get_highlights_tweets", description="Retrieves highlighted tweets from a user's timeline (simulated)")
 async def get_highlights_tweets(
     user_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100,
     cursor: Optional[str] = None
 ) -> List[Dict]:
@@ -675,15 +591,11 @@ async def get_highlights_tweets(
 
     Args:
         user_id (str): The ID of the user whose highlights are to be fetched.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): Number of tweets to retrieve. Default 100. Min 5, Max 100 for get_users_tweets.
         cursor (Optional[str]): Pagination token for fetching the next set of results.
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     # Twitter API v2 doesn't have highlights; use user timeline
     tweets = client.get_users_tweets(id=user_id, max_results=count, pagination_token=cursor, tweet_fields=["id", "text", "created_at"])
     return [tweet.data for tweet in tweets.data]
@@ -691,11 +603,7 @@ async def get_highlights_tweets(
 @server.tool(name="get_user_mentions", description="Get tweets mentioning a specific user")
 async def get_user_mentions(
     user_id: str,
-    api_key: str,
-    api_secret: str,
-    access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
+    username: str,
     count: Optional[int] = 100,
     cursor: Optional[str] = None
 ) -> List[Dict]:
@@ -703,15 +611,11 @@ async def get_user_mentions(
 
     Args:
         user_id (str): The ID of the user whose mentions are to be retrieved.
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        username (str): Your Twitter username (stored in database)
         count (Optional[int]): Number of mentions to retrieve. Default 100. Min 5, Max 100 for get_users_mentions.
         cursor (Optional[str]): Pagination token for fetching the next set of results.
     """
-    client, _ = initialize_twitter_clients(api_key, api_secret, access_token, access_token_secret, bearer_token)
+    client, _ = initialize_twitter_clients(username)
     mentions = client.get_users_mentions(id=user_id, max_results=count, pagination_token=cursor, tweet_fields=["id", "text", "created_at"])
     return [tweet.data for tweet in mentions.data]
 
@@ -719,5 +623,7 @@ async def get_user_mentions(
 def run():
     """Entry point for running the FastMCP server directly."""
     logger.info(f"Starting {server.name}...")
+    logger.info("✅ خادم المصادقة يعمل على http://127.0.0.1:8000")
+    logger.info("📖 يمكنك إدارة الحسابات عبر: http://127.0.0.1:8000/docs")
     # Return the coroutine to be awaited by the caller (e.g., Claude Desktop)
     return server.run()
