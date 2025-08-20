@@ -67,31 +67,55 @@ async def root(request: Request):
         <title>Twitter MCP Authentication</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f5f8fa; }
-            .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             h1 { color: #1da1f2; text-align: center; }
             .auth-section { margin: 20px 0; padding: 20px; border: 1px solid #e1e8ed; border-radius: 5px; }
             .oauth-form { display: flex; gap: 10px; margin: 15px 0; }
             input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-            button { background: #1da1f2; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+            button { background: #1da1f2; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
             button:hover { background: #1991db; }
             .oauth-url { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; word-break: break-all; }
             .success { color: #28a745; }
             .error { color: #dc3545; }
             .manual-section { margin-top: 30px; }
+            .public-oauth { background: #e8f5e8; border-color: #28a745; }
+            .public-oauth h3 { color: #28a745; }
+            .public-btn { background: #28a745; }
+            .public-btn:hover { background: #218838; }
+            .feature-box { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+            .feature-box h4 { margin-top: 0; color: #495057; }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🐦 Twitter MCP Authentication</h1>
             
+            <div class="auth-section public-oauth">
+                <h2>🚀 المصادقة السريعة (مُوصى بها)</h2>
+                <p><strong>أسهل طريقة لإضافة حساب Twitter:</strong></p>
+                <p>اضغط على الزر أدناه وسيتم توجيهك مباشرة إلى Twitter للمصادقة. سيتم استخدام username الخاص بك تلقائياً.</p>
+                <button class="public-btn" onclick="generatePublicOAuth()">🔐 منح الوصول لـ Twitter</button>
+                <div id="publicOAuthResult"></div>
+            </div>
+            
             <div class="auth-section">
-                <h2>🔐 المصادقة التلقائية (OAuth)</h2>
-                <p>أسهل طريقة لإضافة حساب Twitter:</p>
+                <h2>🔐 المصادقة مع username محدد</h2>
+                <p>إذا كنت تريد تحديد username معين:</p>
                 <div class="oauth-form">
                     <input type="text" id="username" placeholder="أدخل اسم المستخدم المطلوب">
                     <button onclick="generateOAuthURL()">إنشاء رابط المصادقة</button>
                 </div>
                 <div id="oauthResult"></div>
+            </div>
+            
+            <div class="feature-box">
+                <h4>✨ المزايا الجديدة:</h4>
+                <ul>
+                    <li><strong>زر واحد للمصادقة:</strong> اضغط وتمتع!</li>
+                    <li><strong>username تلقائي:</strong> من Twitter مباشرة</li>
+                    <li><strong>لا حاجة لإدخال بيانات:</strong> كل شيء تلقائي</li>
+                    <li><strong>مشاركة سهلة:</strong> يمكن مشاركة الرابط مع أي شخص</li>
+                </ul>
             </div>
             
             <div class="manual-section">
@@ -107,9 +131,51 @@ async def root(request: Request):
                 <button onclick="listAccounts()">عرض الحسابات</button>
                 <div id="accountsList"></div>
             </div>
+            
+            <div class="feature-box">
+                <h4>🔗 روابط مفيدة:</h4>
+                <p><strong>الرابط العام للمصادقة:</strong> يمكن مشاركته مع أي شخص</p>
+                <p><strong>الرابط المباشر:</strong> <a href="/auth/public-oauth" target="_blank">/auth/public-oauth</a></p>
+            </div>
         </div>
         
         <script>
+            async function generatePublicOAuth() {
+                try {
+                    const response = await fetch('/auth/public-oauth');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const resultDiv = document.getElementById('publicOAuthResult');
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                <p>✅ تم إنشاء رابط المصادقة العام بنجاح!</p>
+                                <p><strong>الخطوات:</strong></p>
+                                <ol>
+                                    <li>انقر على الرابط أدناه</li>
+                                    <li>سجل دخولك إلى Twitter</li>
+                                    <li>أوافق على الصلاحيات</li>
+                                    <li>سيتم إعادة توجيهك تلقائياً</li>
+                                </ol>
+                                <div class="oauth-url">
+                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
+                                </div>
+                                <p><strong>💡 نصيحة:</strong> يمكنك مشاركة هذا الرابط مع أي شخص!</p>
+                                <p><small>⚠️ لا تشارك هذا الرابط مع أي شخص غير موثوق</small></p>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('publicOAuthResult').innerHTML = `
+                            <div class="error">❌ ${data.error}</div>
+                        `;
+                    }
+                } catch (error) {
+                    document.getElementById('publicOAuthResult').innerHTML = `
+                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
+                    `;
+                }
+            }
+            
             async function generateOAuthURL() {
                 const username = document.getElementById('username').value;
                 if (!username) {
@@ -190,7 +256,7 @@ async def root(request: Request):
 # نقطة نهاية OAuth
 @auth_app.get("/auth/oauth-url")
 async def get_oauth_url(username: str = Query(..., description="اسم المستخدم المطلوب")):
-    """إنشاء رابط مصادقة OAuth لـ Twitter"""
+    """إنشاء رابط مصادقة OAuth لـ Twitter مع username محدد"""
     try:
         auth_url, state = oauth_manager.get_authorization_url(username)
         return {
@@ -205,18 +271,41 @@ async def get_oauth_url(username: str = Query(..., description="اسم المس�
             "error": str(e)
         }
 
+# نقطة نهاية OAuth العام
+@auth_app.get("/auth/public-oauth")
+async def get_public_oauth():
+    """إنشاء رابط مصادقة OAuth عام للجميع"""
+    try:
+        auth_url = oauth_manager.get_public_oauth_url()
+        return {
+            "success": True,
+            "auth_url": auth_url,
+            "message": "رابط المصادقة العام جاهز"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 # نقطة نهاية Callback
 @auth_app.get("/auth/callback")
 async def oauth_callback(
     code: str = Query(..., description="رمز المصادقة من Twitter"),
-    state: str = Query(..., description="حالة OAuth")
+    state: str = Query(None, description="حالة OAuth (اختياري)")
 ):
     """معالجة callback من Twitter OAuth"""
     try:
-        result = oauth_manager.handle_callback(code, state)
+        if state:
+            # استخدام username محدد
+            result = oauth_manager.handle_callback(code, state)
+        else:
+            # استخدام الرابط العام
+            result = oauth_manager.handle_public_callback(code)
         
         if result["success"]:
             # صفحة نجاح
+            username = result.get("username", "المستخدم")
             html_content = f"""
             <!DOCTYPE html>
             <html dir="rtl" lang="ar">
@@ -228,6 +317,7 @@ async def oauth_callback(
                     .success {{ background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
                     .success-icon {{ font-size: 60px; color: #28a745; }}
                     .back-btn {{ background: #1da1f2; color: white; padding: 10px 20px; border: none; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 20px; }}
+                    .username {{ background: #e8f5e8; padding: 10px; border-radius: 5px; margin: 15px 0; font-weight: bold; }}
                 </style>
             </head>
             <body>
@@ -235,7 +325,12 @@ async def oauth_callback(
                     <div class="success-icon">✅</div>
                     <h1>تمت المصادقة بنجاح!</h1>
                     <p>{result['message']}</p>
+                    <div class="username">
+                        اسم المستخدم: @{username}
+                    </div>
                     <p>يمكنك الآن إغلاق هذه الصفحة والعودة إلى Claude Desktop</p>
+                    <p><strong>لاستخدام الحساب:</strong></p>
+                    <p><code>Post a tweet saying "Hello!" using username "{username}"</code></p>
                     <a href="/" class="back-btn">العودة للصفحة الرئيسية</a>
                 </div>
             </body>
