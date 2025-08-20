@@ -5,8 +5,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
-from database import db_manager, TwitterAccount
-from oauth_manager import oauth_manager
+from .database import db_manager, TwitterAccount
+from .oauth_manager import oauth_manager
 import threading
 import time
 import os

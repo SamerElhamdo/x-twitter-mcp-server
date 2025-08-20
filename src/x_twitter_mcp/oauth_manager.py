@@ -4,7 +4,7 @@ import requests
 from typing import Optional, Dict, Tuple
 from urllib.parse import urlencode, parse_qs, urlparse
 import tweepy
-from database import db_manager
+from .database import db_manager
 
 class TwitterOAuthManager:
     """مدير مصادقة OAuth لـ Twitter"""
