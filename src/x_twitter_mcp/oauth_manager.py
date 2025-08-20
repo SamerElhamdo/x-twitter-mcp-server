@@ -48,14 +48,12 @@ class TwitterOAuthManager:
         if not self.client_id:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
-        # معاملات المصادقة العامة
+        # معاملات المصادقة العامة (بدون PKCE)
         params = {
             "response_type": "code",
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
-            "scope": "tweet.read tweet.write users.read follows.read offline.access",
-            "code_challenge_method": "S256",
-            "code_challenge": self._generate_code_challenge()
+            "scope": "tweet.read tweet.write users.read follows.read offline.access"
         }
         
         # إنشاء رابط المصادقة العام
@@ -86,15 +84,13 @@ class TwitterOAuthManager:
             "timestamp": int(os.time())
         }
         
-        # معاملات المصادقة
+        # معاملات المصادقة (بدون PKCE)
         params = {
             "response_type": "code",
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
             "scope": "tweet.read tweet.write users.read follows.read offline.access",
-            "state": state,
-            "code_challenge_method": "S256",
-            "code_challenge": self._generate_code_challenge()
+            "state": state
         }
         
         # إنشاء رابط المصادقة
