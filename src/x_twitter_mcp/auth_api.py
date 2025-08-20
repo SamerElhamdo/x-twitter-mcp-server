@@ -94,7 +94,8 @@ async def root(request: Request):
                 <h2>🚀 المصادقة السريعة (مُوصى بها)</h2>
                 <p><strong>أسهل طريقة لإضافة حساب Twitter:</strong></p>
                 <p>اضغط على الزر أدناه وسيتم توجيهك مباشرة إلى Twitter للمصادقة. سيتم استخدام username الخاص بك تلقائياً.</p>
-                <button class="public-btn" onclick="generatePublicOAuth()">🔐 منح الوصول لـ Twitter</button>
+                <a href="/auth/redirect-to-twitter" class="public-btn" style="text-decoration: none; display: inline-block;">🔐 منح الوصول لـ Twitter</a>
+                <button onclick="showPublicLink()" style="background: #6c757d; margin-left: 10px;">🔗 مشاركة الرابط</button>
                 <div id="publicOAuthResult"></div>
             </div>
             
@@ -140,6 +141,57 @@ async def root(request: Request):
         </div>
         
         <script>
+            async function showPublicLink() {
+                try {
+                    const response = await fetch('/auth/public-oauth');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const resultDiv = document.getElementById('publicOAuthResult');
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                <p>✅ رابط المصادقة العام:</p>
+                                <div class="oauth-url">
+                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
+                                </div>
+                                <p><strong>💡 نصيحة:</strong> يمكنك مشاركة هذا الرابط مع أي شخص!</p>
+                                <button onclick="navigator.clipboard.writeText('${data.auth_url}').then(() => alert('تم نسخ الرابط!'))" style="background: #17a2b8; margin-top: 10px;">
+                                    📋 نسخ الرابط
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('publicOAuthResult').innerHTML = `
+                            <div class="error">❌ ${data.error}</div>
+                        `;
+                    }
+                } catch (error) {
+                    document.getElementById('publicOAuthResult').innerHTML = `
+                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
+                    `;
+                }
+            }
+            
+            async function redirectToTwitter() {
+                try {
+                    const response = await fetch('/auth/public-oauth');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // التوجيه المباشر إلى Twitter
+                        window.location.href = data.auth_url;
+                    } else {
+                        document.getElementById('publicOAuthResult').innerHTML = `
+                            <div class="error">❌ ${data.error}</div>
+                        `;
+                    }
+                } catch (error) {
+                    document.getElementById('publicOAuthResult').innerHTML = `
+                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
+                    `;
+                }
+            }
+            
             async function generatePublicOAuth() {
                 try {
                     const response = await fetch('/auth/public-oauth');
@@ -152,7 +204,7 @@ async def root(request: Request):
                                 <p>✅ تم إنشاء رابط المصادقة العام بنجاح!</p>
                                 <p><strong>الخطوات:</strong></p>
                                 <ol>
-                                    <li>انقر على الرابط أدناه</li>
+                                    <li>انقر على الزر أدناه</li>
                                     <li>سجل دخولك إلى Twitter</li>
                                     <li>أوافق على الصلاحيات</li>
                                     <li>سيتم إعادة توجيهك تلقائياً</li>
@@ -194,7 +246,7 @@ async def root(request: Request):
                                 <p>✅ تم إنشاء رابط المصادقة بنجاح!</p>
                                 <p><strong>الخطوات:</strong></p>
                                 <ol>
-                                    <li>انقر على الرابط أدناه</li>
+                                    <li>انقر على الزر أدناه</li>
                                     <li>سجل دخولك إلى Twitter</li>
                                     <li>أوافق على الصلاحيات</li>
                                     <li>سيتم إعادة توجيهك تلقائياً</li>
@@ -287,6 +339,29 @@ async def get_public_oauth():
             "success": False,
             "error": str(e)
         }
+
+# نقطة نهاية التوجيه المباشر
+@auth_app.get("/auth/redirect-to-twitter")
+async def redirect_to_twitter():
+    """التوجيه المباشر إلى Twitter للمصادقة"""
+    try:
+        auth_url = oauth_manager.get_public_oauth_url()
+        return RedirectResponse(url=auth_url)
+    except Exception as e:
+        return HTMLResponse(content=f"""
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <title>خطأ</title>
+        </head>
+        <body>
+            <h1>خطأ في إنشاء رابط المصادقة</h1>
+            <p>{str(e)}</p>
+            <a href="/">العودة للصفحة الرئيسية</a>
+        </body>
+        </html>
+        """)
 
 # نقطة نهاية Callback
 @auth_app.get("/auth/callback")
