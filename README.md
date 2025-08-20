@@ -5,7 +5,7 @@
 
 A Model Context Protocol (MCP) server for interacting with Twitter (X) via AI tools. This server allows you to fetch tweets, post tweets, search Twitter, manage followers, and more, all through natural language commands in AI Tools.
 
-**🚀 NEW: Local Database with Authentication API! Now you only need to provide your username instead of all API credentials.**
+**🚀 NEW: OAuth 2.0 Authentication with Callback URLs! Secure, easy, and professional.**
 
 <a href="https://glama.ai/mcp/servers/@rafaljanicki/x-twitter-mcp-server">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@rafaljanicki/x-twitter-mcp-server/badge" alt="X (Twitter) server MCP server" />
@@ -13,31 +13,63 @@ A Model Context Protocol (MCP) server for interacting with Twitter (X) via AI to
 
 ## Features
 
-- **🔐 Local Database Authentication**: Store Twitter API credentials locally and use only username
-- **🌐 Web API Interface**: Manage accounts via web interface at http://127.0.0.1:8000/docs
-- **📱 Account Management**: Add, update, test, and remove Twitter accounts easily
+- **🔐 OAuth 2.0 Authentication**: Secure Twitter authentication with callback URLs
+- **🌐 Web Interface**: Beautiful Arabic interface for account management
+- **📱 One-Click Setup**: Add Twitter accounts with just a username
+- **🛡️ Secure Storage**: Local SQLite database for credential storage
+- **📊 Account Management**: Add, update, test, and remove accounts easily
 - Fetch user profiles, followers, and following lists
 - Post, delete, and favorite tweets
 - Search Twitter for tweets and trends
 - Manage bookmarks and timelines
 - Built-in rate limit handling for the Twitter API
-- Uses Twitter API v2 with proper authentication (API keys and tokens)
-- Provides a complete implementation of Twitter API v2 endpoints
+- Uses Twitter API v2 with proper authentication
 
 ## How It Works
 
-1. **First Time Setup**: Add your Twitter account credentials via the web API
-2. **Daily Usage**: Just provide your username in each request
-3. **Secure Storage**: Credentials are stored locally in SQLite database
-4. **Easy Management**: Web interface for account management
+1. **OAuth Setup**: Configure your Twitter Developer App with callback URL
+2. **User Experience**: Users enter username and get OAuth link
+3. **Secure Flow**: Twitter handles authentication and redirects back
+4. **Automatic Storage**: Account credentials are stored locally
+5. **Daily Usage**: Just use username in Claude Desktop requests
 
 ## Prerequisites
 
 - **Python 3.10 or higher**: Ensure Python is installed on your system.
-- **Twitter Developer Account**: You need API credentials (API Key, API Secret, Access Token, Access Token Secret, and Bearer Token) from the [Twitter Developer Portal](https://developer.twitter.com/).
+- **Twitter Developer Account**: You need OAuth 2.0 credentials from the [Twitter Developer Portal](https://developer.twitter.com/).
+- **OAuth App Setup**: Configure your Twitter app with the correct callback URL.
 - Optional: **Claude Desktop**: Download and install the Claude Desktop app from the [Anthropic website](https://www.anthropic.com/).
 - Optional: **Node.js** (for MCP integration): Required for running MCP servers in Claude Desktop.
 - A package manager like `uv` or `pip` for Python dependencies.
+
+## Twitter Developer App Setup
+
+### Step 1: Create Twitter App
+1. Go to [Twitter Developer Portal](https://developer.twitter.com/)
+2. Create a new app or use existing one
+3. Enable OAuth 2.0
+
+### Step 2: Configure OAuth Settings
+1. In your app settings, add these OAuth 2.0 scopes:
+   - `tweet.read`
+   - `tweet.write`
+   - `users.read`
+   - `follows.read`
+   - `offline.access`
+
+2. Set the callback URL to:
+   ```
+   http://YOUR_SERVER_IP:8000/auth/callback
+   ```
+   Or for production:
+   ```
+   https://yourdomain.com/auth/callback
+   ```
+
+### Step 3: Get Credentials
+Copy these from your Twitter app:
+- **Client ID** (API Key)
+- **Client Secret** (API Secret)
 
 ## Installation
 
@@ -81,9 +113,35 @@ If you prefer to install from the source repository:
    pip install .
    ```
 
-## Running the Server
+## Configuration
 
-You can run the server in two ways:
+### Environment Variables
+Create a `.env` file or set environment variables:
+
+```bash
+# Twitter OAuth
+export TWITTER_CLIENT_ID="your_twitter_client_id"
+export TWITTER_CLIENT_SECRET="your_twitter_client_secret"
+
+# Server Settings
+export HOST="0.0.0.0"  # للوصول من الخارج
+export PORT="8000"
+
+# Optional: Custom callback URL
+export TWITTER_REDIRECT_URI="https://yourdomain.com/auth/callback"
+```
+
+### For Production
+```bash
+# Security
+export SECRET_KEY="your-super-secret-key-here"
+export DATABASE_URL="sqlite:///./twitter_accounts.db"
+
+# OAuth Security
+export OAUTH_STATE_EXPIRE_SECONDS="1800"  # 30 minutes
+```
+
+## Running the Server
 
 ### Option 1: Using the CLI Script
 The project defines a CLI script `x-twitter-mcp-server`.
@@ -109,39 +167,53 @@ The server will start and you'll see:
 ```
 Starting TwitterMCPServer...
 ✅ خادم المصادقة يعمل على http://127.0.0.1:8000
-📖 يمكنك إدارة الحسابات عبر: http://127.0.0.1:8000/docs
+🌐 الصفحة الرئيسية: http://127.0.0.1:8000/
+📖 واجهة API: http://127.0.0.1:8000/docs
 ```
 
-## Setting Up Your First Twitter Account
+## Using the OAuth System
 
 ### Step 1: Access the Web Interface
-Open your browser and go to: **http://127.0.0.1:8000/docs**
+Open your browser and go to: **http://YOUR_SERVER_IP:8000/**
 
-### Step 2: Add Your Account
-1. Click on the `POST /accounts/` endpoint
-2. Click "Try it out"
-3. Fill in your Twitter account details:
-   ```json
-   {
-     "username": "your_twitter_username",
-     "api_key": "your_api_key",
-     "api_secret": "your_api_secret",
-     "access_token": "your_access_token",
-     "access_token_secret": "your_access_token_secret",
-     "bearer_token": "your_bearer_token",
-     "display_name": "Your Display Name"
-   }
-   ```
-4. Click "Execute"
+### Step 2: Add Account via OAuth
+1. Enter the username you want to use
+2. Click "إنشاء رابط المصادقة"
+3. Copy the generated OAuth URL
+4. Open the URL in a new tab
+5. Sign in to Twitter and authorize the app
+6. You'll be redirected back with success message
 
-### Step 3: Test Your Account
-1. Click on the `POST /accounts/{username}/test` endpoint
-2. Enter your username
-3. Click "Execute" to verify your credentials work
+### Step 3: Use in Claude Desktop
+Now you can use any tool with just your username:
+
+```
+Post a tweet saying "Hello World!" using username "myusername"
+Search Twitter for recent tweets about AI using username "myusername"
+Show my Twitter timeline using username "myusername"
+```
+
+## Web Interface Features
+
+### 🌐 Main Page (`/`)
+- **OAuth Authentication**: One-click account setup
+- **Manual API**: Link to traditional API interface
+- **Account List**: View all stored accounts
+- **Arabic Interface**: Full Arabic language support
+
+### 🔐 OAuth Endpoints
+- `GET /auth/oauth-url?username={username}` - Generate OAuth URL
+- `GET /auth/callback?code={code}&state={state}` - Handle Twitter callback
+
+### 📊 Account Management
+- `GET /accounts/` - List all accounts
+- `POST /accounts/` - Add account manually
+- `GET /accounts/{username}` - Get specific account
+- `PUT /accounts/{username}` - Update account
+- `DELETE /accounts/{username}` - Delete account
+- `POST /accounts/{username}/test` - Test credentials
 
 ## Using with Claude Desktop
-
-To use this MCP server with Claude Desktop, you need to configure Claude to connect to the server. Follow these steps:
 
 ### Step 1: Install Node.js
 Claude Desktop uses Node.js to run MCP servers. If you don't have Node.js installed:
@@ -169,7 +241,9 @@ Edit `claude_desktop_config.json` to include the `x-twitter-mcp` server:
       "command": "x-twitter-mcp-server",
       "args": [],
       "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "TWITTER_CLIENT_ID": "your_client_id",
+        "TWITTER_CLIENT_SECRET": "your_client_secret"
       }
     }
   }
@@ -185,38 +259,13 @@ Edit `claude_desktop_config.json` to include the `x-twitter-mcp` server:
 - Look for a hammer or connector icon in the input area (bottom right corner).
 - Click the icon to see the available tools from `x-twitter-mcp`.
 
-## Using the Tools
-
-### First Time: Add Your Account
-```
-Add my Twitter account with username "myusername", API key "xxx", API secret "xxx", access token "xxx", access token secret "xxx", and bearer token "xxx"
-```
-
-### Daily Usage: Just Use Username
-Now you can use any tool with just your username:
-
-- **Post a Tweet**:
-  ```
-  Post a tweet saying "Hello World!" using username "myusername"
-  ```
-
-- **Search Twitter**:
-  ```
-  Search Twitter for recent tweets about AI using username "myusername"
-  ```
-
-- **Get Timeline**:
-  ```
-  Show my Twitter timeline using username "myusername"
-  ```
-
 ## Available Tools
 
 ### Account Management Tools
 
 #### `add_twitter_account`
 - **Description**: Add a new Twitter account to the database
-- **Usage**: First time setup only
+- **Usage**: First time setup only (manual method)
 - **Example**: 
   ```
   Add my Twitter account with username "john_doe", API key "xxx", API secret "xxx", access token "xxx", access token secret "xxx", and bearer token "xxx"
@@ -299,47 +348,79 @@ Now you can use any tool with just your username:
   Show my Twitter For You timeline, limit to 20 tweets, using username "john_doe"
   ```
 
-## Web API Endpoints
+## OAuth Flow Diagram
 
-The server provides a web API for account management at **http://127.0.0.1:8000/docs**:
-
-- `POST /accounts/` - Add/Update account
-- `GET /accounts/` - List all accounts
-- `GET /accounts/{username}` - Get specific account
-- `PUT /accounts/{username}` - Update account
-- `DELETE /accounts/{username}` - Delete account
-- `PATCH /accounts/{username}/deactivate` - Deactivate account
-- `POST /accounts/{username}/test` - Test credentials
+```
+User → Web Interface → Generate OAuth URL → Twitter Login → Authorization → Callback → Success
+  ↓
+Username stored → Use in Claude Desktop → API calls with stored credentials
+```
 
 ## Security Features
 
-1. **Local Storage**: All credentials stored locally in SQLite database
-2. **No Environment Variables**: No need to set system-wide variables
-3. **Per-Account Isolation**: Each account is completely separate
-4. **Credential Validation**: Automatic testing of API keys
-5. **Secure Access**: Web interface for safe account management
+1. **OAuth 2.0**: Industry-standard authentication protocol
+2. **PKCE Support**: Enhanced security for public clients
+3. **State Validation**: Prevents CSRF attacks
+4. **Local Storage**: Credentials stored locally, not in cloud
+5. **Session Management**: Secure OAuth state handling
+6. **Scope Limitation**: Only requested permissions granted
+
+## Production Deployment
+
+### Environment Variables
+```bash
+# Production settings
+export HOST="0.0.0.0"
+export PORT="8000"
+export SECRET_KEY="your-production-secret-key"
+export TWITTER_REDIRECT_URI="https://yourdomain.com/auth/callback"
+
+# Database (optional: use PostgreSQL for production)
+export DATABASE_URL="postgresql://user:pass@localhost/twitter_mcp"
+```
+
+### Reverse Proxy (Nginx)
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### SSL Certificate
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d yourdomain.com
+```
 
 ## Troubleshooting
 
-- **Server Not Starting**:
-    - Check the terminal output for errors
-    - Verify that all dependencies are installed
-    - Ensure port 8000 is available for the auth server
+### OAuth Issues
+- **Invalid Client**: Check your Twitter app credentials
+- **Callback Mismatch**: Ensure callback URL matches exactly
+- **Scope Issues**: Verify OAuth 2.0 scopes are enabled
+- **State Expired**: OAuth states expire after 1 hour
 
-- **Authentication Errors**:
-    - Use the web interface to test your credentials
-    - Verify your Twitter Developer App permissions
-    - Check that all 5 API credentials are correct
+### Server Issues
+- **Port Conflicts**: Ensure port 8000 is available
+- **Firewall**: Allow incoming connections on port 8000
+- **Environment Variables**: Check all required variables are set
 
-- **Account Not Found**:
-    - Use `list_twitter_accounts` to see stored accounts
-    - Add your account using `add_twitter_account`
-    - Verify the username spelling
-
-- **Web Interface Not Accessible**:
-    - Check if the server is running
-    - Verify the URL: http://127.0.0.1:8000/docs
-    - Check firewall settings
+### Twitter API Issues
+- **Rate Limits**: Check Twitter API rate limits
+- **App Status**: Ensure your Twitter app is active
+- **Permissions**: Verify required scopes are granted
 
 ## Contributing
 

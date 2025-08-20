@@ -6,8 +6,8 @@ import tweepy
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
-from database import db_manager
-from auth_api import start_auth_server
+from .database import db_manager
+from .auth_api import start_auth_server
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

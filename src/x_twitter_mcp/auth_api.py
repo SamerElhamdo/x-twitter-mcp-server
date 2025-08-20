@@ -1,17 +1,25 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request, Query
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
 from database import db_manager, TwitterAccount
+from oauth_manager import oauth_manager
 import threading
 import time
+import os
 
 # إنشاء تطبيق FastAPI
 auth_app = FastAPI(
     title="Twitter MCP Authentication API",
-    description="واجهة API لإدارة حسابات Twitter في MCP Server",
-    version="1.0.0"
+    description="واجهة API لإدارة حسابات Twitter في MCP Server مع OAuth",
+    version="2.0.0"
 )
+
+# إعداد القوالب (اختياري)
+templates = Jinja2Templates(directory="templates") if os.path.exists("templates") else None
 
 # نماذج البيانات
 class AccountCreate(BaseModel):
@@ -43,7 +51,240 @@ class TestCredentialsResponse(BaseModel):
     is_valid: bool
     message: str
 
-# نقطة نهاية لإنشاء حساب جديد
+class OAuthRequest(BaseModel):
+    username: str
+
+# الصفحة الرئيسية
+@auth_app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """الصفحة الرئيسية مع روابط المصادقة"""
+    html_content = """
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Twitter MCP Authentication</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f5f8fa; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #1da1f2; text-align: center; }
+            .auth-section { margin: 20px 0; padding: 20px; border: 1px solid #e1e8ed; border-radius: 5px; }
+            .oauth-form { display: flex; gap: 10px; margin: 15px 0; }
+            input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+            button { background: #1da1f2; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+            button:hover { background: #1991db; }
+            .oauth-url { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; word-break: break-all; }
+            .success { color: #28a745; }
+            .error { color: #dc3545; }
+            .manual-section { margin-top: 30px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🐦 Twitter MCP Authentication</h1>
+            
+            <div class="auth-section">
+                <h2>🔐 المصادقة التلقائية (OAuth)</h2>
+                <p>أسهل طريقة لإضافة حساب Twitter:</p>
+                <div class="oauth-form">
+                    <input type="text" id="username" placeholder="أدخل اسم المستخدم المطلوب">
+                    <button onclick="generateOAuthURL()">إنشاء رابط المصادقة</button>
+                </div>
+                <div id="oauthResult"></div>
+            </div>
+            
+            <div class="manual-section">
+                <h2>📝 المصادقة اليدوية</h2>
+                <p>إذا كنت تفضل إدخال المفاتيح يدوياً:</p>
+                <a href="/docs" target="_blank">
+                    <button>فتح واجهة API</button>
+                </a>
+            </div>
+            
+            <div class="auth-section">
+                <h2>📋 الحسابات المخزنة</h2>
+                <button onclick="listAccounts()">عرض الحسابات</button>
+                <div id="accountsList"></div>
+            </div>
+        </div>
+        
+        <script>
+            async function generateOAuthURL() {
+                const username = document.getElementById('username').value;
+                if (!username) {
+                    alert('يرجى إدخال اسم المستخدم');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/auth/oauth-url?username=${encodeURIComponent(username)}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const resultDiv = document.getElementById('oauthResult');
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                <p>✅ تم إنشاء رابط المصادقة بنجاح!</p>
+                                <p><strong>الخطوات:</strong></p>
+                                <ol>
+                                    <li>انقر على الرابط أدناه</li>
+                                    <li>سجل دخولك إلى Twitter</li>
+                                    <li>أوافق على الصلاحيات</li>
+                                    <li>سيتم إعادة توجيهك تلقائياً</li>
+                                </ol>
+                                <div class="oauth-url">
+                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
+                                </div>
+                                <p><small>⚠️ لا تشارك هذا الرابط مع أي شخص</small></p>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('oauthResult').innerHTML = `
+                            <div class="error">❌ ${data.error}</div>
+                        `;
+                    }
+                } catch (error) {
+                    document.getElementById('oauthResult').innerHTML = `
+                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
+                    `;
+                }
+            }
+            
+            async function listAccounts() {
+                try {
+                    const response = await fetch('/accounts/');
+                    const accounts = await response.json();
+                    
+                    const accountsDiv = document.getElementById('accountsList');
+                    if (accounts.length === 0) {
+                        accountsDiv.innerHTML = '<p>لا توجد حسابات مخزنة</p>';
+                        return;
+                    }
+                    
+                    let html = '<div style="margin-top: 15px;">';
+                    accounts.forEach(account => {
+                        html += `
+                            <div style="border: 1px solid #e1e8ed; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                                <strong>@${account.username}</strong><br>
+                                <small>الاسم: ${account.display_name || 'غير محدد'}</small><br>
+                                <small>تاريخ الإنشاء: ${account.created_at || 'غير محدد'}</small><br>
+                                <small>الحالة: ${account.is_active ? '✅ نشط' : '❌ غير نشط'}</small>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    accountsDiv.innerHTML = html;
+                } catch (error) {
+                    document.getElementById('accountsList').innerHTML = `
+                        <div class="error">❌ خطأ في جلب الحسابات: ${error.message}</div>
+                    `;
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+# نقطة نهاية OAuth
+@auth_app.get("/auth/oauth-url")
+async def get_oauth_url(username: str = Query(..., description="اسم المستخدم المطلوب")):
+    """إنشاء رابط مصادقة OAuth لـ Twitter"""
+    try:
+        auth_url, state = oauth_manager.get_authorization_url(username)
+        return {
+            "success": True,
+            "auth_url": auth_url,
+            "state": state,
+            "message": f"تم إنشاء رابط المصادقة لـ @{username}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+# نقطة نهاية Callback
+@auth_app.get("/auth/callback")
+async def oauth_callback(
+    code: str = Query(..., description="رمز المصادقة من Twitter"),
+    state: str = Query(..., description="حالة OAuth")
+):
+    """معالجة callback من Twitter OAuth"""
+    try:
+        result = oauth_manager.handle_callback(code, state)
+        
+        if result["success"]:
+            # صفحة نجاح
+            html_content = f"""
+            <!DOCTYPE html>
+            <html dir="rtl" lang="ar">
+            <head>
+                <meta charset="UTF-8">
+                <title>تمت المصادقة بنجاح</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; text-align: center; margin: 50px; background: #f5f8fa; }}
+                    .success {{ background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                    .success-icon {{ font-size: 60px; color: #28a745; }}
+                    .back-btn {{ background: #1da1f2; color: white; padding: 10px 20px; border: none; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="success">
+                    <div class="success-icon">✅</div>
+                    <h1>تمت المصادقة بنجاح!</h1>
+                    <p>{result['message']}</p>
+                    <p>يمكنك الآن إغلاق هذه الصفحة والعودة إلى Claude Desktop</p>
+                    <a href="/" class="back-btn">العودة للصفحة الرئيسية</a>
+                </div>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=html_content)
+        else:
+            # صفحة خطأ
+            html_content = f"""
+            <!DOCTYPE html>
+            <html dir="rtl" lang="ar">
+            <head>
+                <meta charset="UTF-8">
+                <title>خطأ في المصادقة</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; text-align: center; margin: 50px; background: #f5f8fa; }}
+                    .error {{ background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                    .error-icon {{ font-size: 60px; color: #dc3545; }}
+                    .back-btn {{ background: #1da1f2; color: white; padding: 10px 20px; border: none; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="error">
+                    <div class="error-icon">❌</div>
+                    <h1>خطأ في المصادقة</h1>
+                    <p>{result['error']}</p>
+                    <a href="/" class="back-btn">العودة للصفحة الرئيسية</a>
+                </div>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=html_content)
+            
+    except Exception as e:
+        return HTMLResponse(content=f"""
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <title>خطأ</title>
+        </head>
+        <body>
+            <h1>خطأ</h1>
+            <p>{str(e)}</p>
+        </body>
+        </html>
+        """)
+
+# نقطة نهاية لإنشاء حساب جديد (يدوي)
 @auth_app.post("/accounts/", response_model=AccountResponse)
 async def create_account(account: AccountCreate):
     """إنشاء حساب Twitter جديد أو تحديثه إذا كان موجوداً"""
@@ -182,20 +423,30 @@ async def test_account_credentials(username: str):
         )
 
 # نقطة نهاية للحصول على معلومات الخادم
-@auth_app.get("/")
-async def root():
-    """الصفحة الرئيسية للـ API"""
+@auth_app.get("/info")
+async def get_server_info():
+    """الحصول على معلومات الخادم"""
     return {
         "message": "Twitter MCP Authentication API",
-        "version": "1.0.0",
+        "version": "2.0.0",
+        "features": [
+            "OAuth 2.0 Authentication",
+            "Local Database Storage",
+            "Web Interface",
+            "API Documentation"
+        ],
         "endpoints": {
+            "home": "GET /",
+            "oauth_url": "GET /auth/oauth-url?username={username}",
+            "oauth_callback": "GET /auth/callback?code={code}&state={state}",
             "create_account": "POST /accounts/",
             "get_all_accounts": "GET /accounts/",
             "get_account": "GET /accounts/{username}",
             "update_account": "PUT /accounts/{username}",
             "delete_account": "DELETE /accounts/{username}",
             "deactivate_account": "PATCH /accounts/{username}/deactivate",
-            "test_credentials": "POST /accounts/{username}/test"
+            "test_credentials": "POST /accounts/{username}/test",
+            "api_docs": "GET /docs"
         }
     }
 
@@ -212,6 +463,8 @@ def start_auth_server(host: str = "127.0.0.1", port: int = 8000):
     time.sleep(2)
     
     print(f"✅ خادم المصادقة يعمل على http://{host}:{port}")
+    print(f"🌐 الصفحة الرئيسية: http://{host}:{port}/")
+    print(f"📖 واجهة API: http://{host}:{port}/docs")
     return server_thread
 
 if __name__ == "__main__":
