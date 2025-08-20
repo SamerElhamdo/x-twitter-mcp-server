@@ -5,6 +5,8 @@
 
 A Model Context Protocol (MCP) server for interacting with Twitter (X) via AI tools. This server allows you to fetch tweets, post tweets, search Twitter, manage followers, and more, all through natural language commands in AI Tools.
 
+**⚠️ IMPORTANT: This server now requires Twitter API credentials to be provided in each request for enhanced security and flexibility.**
+
 <a href="https://glama.ai/mcp/servers/@rafaljanicki/x-twitter-mcp-server">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@rafaljanicki/x-twitter-mcp-server/badge" alt="X (Twitter) server MCP server" />
 </a>
@@ -16,6 +18,7 @@ A Model Context Protocol (MCP) server for interacting with Twitter (X) via AI to
 - Search Twitter for tweets and trends.
 - Manage bookmarks and timelines.
 - Built-in rate limit handling for the Twitter API.
+- **Enhanced Security**: Twitter API credentials are required in each request, eliminating the need for environment variables.
 - Uses Twitter API v2 with proper authentication (API keys and tokens), avoiding the username/password hack to minimize the risk of account suspensions.
 - Provides a complete implementation of Twitter API v2 endpoints for user management, tweet management, timelines, and search functionality.
 
@@ -69,17 +72,6 @@ If you prefer to install from the source repository:
    pip install .
    ```
 
-4. **Configure Environment Variables**:
-    - Create a `.env` file in the project root (you can copy `.env.example` if provided).
-    - Add your Twitter API credentials:
-      ```
-      TWITTER_API_KEY=your_api_key
-      TWITTER_API_SECRET=your_api_secret
-      TWITTER_ACCESS_TOKEN=your_access_token
-      TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
-      TWITTER_BEARER_TOKEN=your_bearer_token
-      ```
-
 ## Running the Server
 
 You can run the server in two ways:
@@ -98,7 +90,7 @@ uv run x-twitter-mcp-server
 ```
 
 ### Option 2: Using FastMCP Directly (Source Only)
-If you installed from source and prefer to run the server using FastMCP’s development mode:
+If you installed from source and prefer to run the server using FastMCP's development mode:
 
 ```bash
 fastmcp dev src/x_twitter_mcp/server.py
@@ -114,7 +106,7 @@ Starting TwitterMCPServer...
 To use this MCP server with Claude Desktop, you need to configure Claude to connect to the server. Follow these steps:
 
 ### Step 1: Install Node.js
-Claude Desktop uses Node.js to run MCP servers. If you don’t have Node.js installed:
+Claude Desktop uses Node.js to run MCP servers. If you don't have Node.js installed:
 - Download and install Node.js from [nodejs.org](https://nodejs.org/).
 - Verify installation:
   ```bash
@@ -127,7 +119,7 @@ Claude Desktop uses a `claude_desktop_config.json` file to configure MCP servers
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-If the file doesn’t exist, create it.
+If the file doesn't exist, create it.
 
 ### Step 3: Configure the MCP Server
 Edit `claude_desktop_config.json` to include the `x-twitter-mcp` server. Replace `/path/to/x-twitter-mcp-server` with the actual path to your project directory (if installed from source) or the path to your Python executable (if installed from PyPI).
@@ -140,12 +132,7 @@ If installed from PyPI:
       "command": "x-twitter-mcp-server",
       "args": [],
       "env": {
-        "PYTHONUNBUFFERED": "1",
-        "TWITTER_API_KEY": "your_api_key",
-        "TWITTER_API_SECRET": "your_api_secret",
-        "TWITTER_ACCESS_TOKEN": "your_access_token",
-        "TWITTER_ACCESS_TOKEN_SECRET": "your_access_token_secret",
-        "TWITTER_BEARER_TOKEN": "your_bearer_token"
+        "PYTHONUNBUFFERED": "1"
       }
     }
   }
@@ -172,9 +159,7 @@ If installed from source with `uv`:
 }
 ```
 
-- `"command": "x-twitter-mcp-server"`: Uses the CLI script directly if installed from PyPI.
-- `"env"`: If installed from PyPI, you may need to provide environment variables directly in the config (since there’s no `.env` file). If installed from source, the `.env` file will be used.
-- `"env": {"PYTHONUNBUFFERED": "1"}`: Ensures output is unbuffered for better logging in Claude.
+**Note**: Since the server now requires API credentials in each request, you no longer need to set Twitter API environment variables in the configuration.
 
 ### Step 4: Restart Claude Desktop
 - Quit Claude Desktop completely.
@@ -186,29 +171,29 @@ If installed from source with `uv`:
 - Click the icon to see the available tools from `x-twitter-mcp`, such as `post_tweet`, `search_twitter`, `get_user_profile`, etc.
 
 ### Step 6: Test with Claude
-You can now interact with Twitter using natural language in Claude Desktop. Here are some example prompts:
+You can now interact with Twitter using natural language in Claude Desktop. **Important**: You'll need to provide your Twitter API credentials in each request. Here are some example prompts:
 
 - **Fetch a User Profile**:
   ```
-  Get the Twitter profile for user ID 123456.
+  Get the Twitter profile for user ID 123456 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
-  Claude will call the `get_user_profile` tool and return the user’s details.
+  Claude will call the `get_user_profile` tool and return the user's details.
 
 - **Post a Tweet**:
   ```
-  Post a tweet saying "Hello from Claude Desktop! #MCP"
+  Post a tweet saying "Hello from Claude Desktop! #MCP" using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will use the `post_tweet` tool to post the tweet and confirm the action.
 
 - **Search Twitter**:
   ```
-  Search Twitter for recent tweets about AI.
+  Search Twitter for recent tweets about AI using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will invoke the `search_twitter` tool and return relevant tweets.
 
 - **Get Trends**:
   ```
-  What are the current trending topics on Twitter?
+  What are the current trending topics on Twitter? Use my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will use the `get_trends` tool to fetch trending topics.
 
@@ -218,37 +203,44 @@ When prompted, grant Claude permission to use the MCP tools for the chat session
 
 Below is a list of all tools provided by the `x-twitter-mcp` server, along with example executions in Claude Desktop using natural language prompts.
 
+**⚠️ Note**: All tools now require Twitter API credentials as parameters:
+- `api_key`: Your Twitter API Key
+- `api_secret`: Your Twitter API Secret  
+- `access_token`: Your Twitter Access Token
+- `access_token_secret`: Your Twitter Access Token Secret
+- `bearer_token`: Your Twitter Bearer Token
+
 ### User Management Tools
 
 #### `get_user_profile`
 - **Description**: Get detailed profile information for a user.
 - **Claude Desktop Example**:
   ```
-  Get the Twitter profile for user ID 123456789.
+  Get the Twitter profile for user ID 123456789 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
-  Claude will return the user’s profile details, including ID, name, username, profile image URL, and description.
+  Claude will return the user's profile details, including ID, name, username, profile image URL, and description.
 
 #### `get_user_by_screen_name`
 - **Description**: Fetches a user by screen name.
 - **Claude Desktop Example**:
   ```
-  Get the Twitter user with screen name "example_user".
+  Get the Twitter user with screen name "example_user" using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
-  Claude will return the user’s profile details.
+  Claude will return the user's profile details.
 
 #### `get_user_by_id`
 - **Description**: Fetches a user by ID.
 - **Claude Desktop Example**:
   ```
-  Fetch the Twitter user with ID 987654321.
+  Fetch the Twitter user with ID 987654321 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
-  Claude will return the user’s profile details.
+  Claude will return the user's profile details.
 
 #### `get_user_followers`
 - **Description**: Retrieves a list of followers for a given user.
 - **Claude Desktop Example**:
   ```
-  Get the followers of user ID 123456789, limit to 50.
+  Get the followers of user ID 123456789, limit to 50, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return a list of up to 50 followers.
 
@@ -256,7 +248,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Retrieves users the given user is following.
 - **Claude Desktop Example**:
   ```
-  Who is user ID 123456789 following? Limit to 50 users.
+  Who is user ID 123456789 following? Limit to 50 users. Use my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return a list of up to 50 users.
 
@@ -264,7 +256,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Retrieves a list of common followers.
 - **Claude Desktop Example**:
   ```
-  Get common followers for user ID 123456789, limit to 50.
+  Get common followers for user ID 123456789, limit to 50, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return a list of up to 50 common followers (simulated by filtering followers).
 
@@ -272,7 +264,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Retrieves a list of users to which the specified user is subscribed.
 - **Claude Desktop Example**:
   ```
-  Get the subscriptions for user ID 123456789, limit to 50.
+  Get the subscriptions for user ID 123456789, limit to 50, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return a list of up to 50 users (using following as a proxy for subscriptions).
 
@@ -282,7 +274,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Post a tweet with optional media, reply, and tags.
 - **Claude Desktop Example**:
   ```
-  Post a tweet saying "Hello from Claude Desktop! #MCP"
+  Post a tweet saying "Hello from Claude Desktop! #MCP" using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will post the tweet and return the tweet details.
 
@@ -290,7 +282,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Delete a tweet by its ID.
 - **Claude Desktop Example**:
   ```
-  Delete the tweet with ID 123456789012345678.
+  Delete the tweet with ID 123456789012345678 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will delete the tweet and confirm the action.
 
@@ -298,15 +290,15 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Get detailed information about a specific tweet.
 - **Claude Desktop Example**:
   ```
-  Get details for tweet ID 123456789012345678.
+  Get details for tweet ID 123456789012345678 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
-  Claude will return the tweet’s details, including ID, text, creation date, and author ID.
+  Claude will return the tweet's details, including ID, text, creation date, and author ID.
 
 #### `create_poll_tweet`
 - **Description**: Create a tweet with a poll.
 - **Claude Desktop Example**:
   ```
-  Create a poll tweet with the question "What's your favorite color?" and options "Red", "Blue", "Green" for 60 minutes.
+  Create a poll tweet with the question "What's your favorite color?" and options "Red", "Blue", "Green" for 60 minutes using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will create the poll tweet and return the tweet details.
 
@@ -314,15 +306,15 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Vote on a poll.
 - **Claude Desktop Example**:
   ```
-  Vote "Blue" on the poll in tweet ID 123456789012345678.
+  Vote "Blue" on the poll in tweet ID 123456789012345678 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
-  Claude will return a mock response (since Twitter API v2 doesn’t support poll voting).
+  Claude will return a mock response (since Twitter API v2 doesn't support poll voting).
 
 #### `favorite_tweet`
 - **Description**: Favorites a tweet.
 - **Claude Desktop Example**:
   ```
-  Like the tweet with ID 123456789012345678.
+  Like the tweet with ID 123456789012345678 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will favorite the tweet and confirm the action.
 
@@ -330,7 +322,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Unfavorites a tweet.
 - **Claude Desktop Example**:
   ```
-  Unlike the tweet with ID 123456789012345678.
+  Unlike the tweet with ID 123456789012345678 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will unfavorite the tweet and confirm the action.
 
@@ -338,7 +330,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Adds the tweet to bookmarks.
 - **Claude Desktop Example**:
   ```
-  Bookmark the tweet with ID 123456789012345678.
+  Bookmark the tweet with ID 123456789012345678 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will bookmark the tweet and confirm the action.
 
@@ -346,7 +338,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Removes the tweet from bookmarks.
 - **Claude Desktop Example**:
   ```
-  Remove the bookmark for tweet ID 123456789012345678.
+  Remove the bookmark for tweet ID 123456789012345678 using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will remove the bookmark and confirm the action.
 
@@ -354,7 +346,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Deletes all bookmarks.
 - **Claude Desktop Example**:
   ```
-  Delete all my Twitter bookmarks.
+  Delete all my Twitter bookmarks using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will delete all bookmarks and confirm the action.
 
@@ -364,7 +356,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Get tweets from your home timeline (For You).
 - **Claude Desktop Example**:
   ```
-  Show my Twitter For You timeline, limit to 20 tweets.
+  Show my Twitter For You timeline, limit to 20 tweets, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return up to 20 tweets from your For You timeline.
 
@@ -372,7 +364,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Get tweets from your home timeline (Following).
 - **Claude Desktop Example**:
   ```
-  Show my Twitter Following timeline, limit to 20 tweets.
+  Show my Twitter Following timeline, limit to 20 tweets, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return up to 20 tweets from your Following timeline.
 
@@ -380,7 +372,7 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Search Twitter with a query.
 - **Claude Desktop Example**:
   ```
-  Search Twitter for recent tweets about AI, limit to 10.
+  Search Twitter for recent tweets about AI, limit to 10, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return up to 10 recent tweets about AI.
 
@@ -388,31 +380,39 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
 - **Description**: Retrieves trending topics on Twitter.
 - **Claude Desktop Example**:
   ```
-  What are the current trending topics on Twitter? Limit to 10.
+  What are the current trending topics on Twitter? Limit to 10. Use my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return up to 10 trending topics.
 
 #### `get_highlights_tweets`
-- **Description**: Retrieves highlighted tweets from a user’s timeline.
+- **Description**: Retrieves highlighted tweets from a user's timeline.
 - **Claude Desktop Example**:
   ```
-  Get highlighted tweets from user ID 123456789, limit to 20.
+  Get highlighted tweets from user ID 123456789, limit to 20, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
-  Claude will return up to 20 tweets from the user’s timeline (simulated as highlights).
+  Claude will return up to 20 tweets from the user's timeline (simulated as highlights).
 
 #### `get_user_mentions`
 - **Description**: Get tweets mentioning a specific user.
 - **Claude Desktop Example**:
   ```
-  Get tweets mentioning user ID 123456789, limit to 20.
+  Get tweets mentioning user ID 123456789, limit to 20, using my Twitter API credentials: API Key: "your_key", API Secret: "your_secret", Access Token: "your_token", Access Token Secret: "your_token_secret", Bearer Token: "your_bearer".
   ```
   Claude will return up to 20 tweets mentioning the user.
+
+## Security Features
+
+This updated version includes several security enhancements:
+
+1. **No Environment Variables**: API credentials are no longer stored in environment variables or configuration files.
+2. **Per-Request Authentication**: Each API call requires fresh credentials, preventing credential exposure.
+3. **No Persistent Storage**: Credentials are not cached or stored between requests.
+4. **Flexible Usage**: Different users can use different Twitter accounts in the same session.
 
 ## Troubleshooting
 
 - **Server Not Starting**:
-    - Ensure your `.env` file has all required Twitter API credentials (if installed from source).
-    - If installed from PyPI, ensure environment variables are set in `claude_desktop_config.json` or your shell.
+    - The server no longer requires Twitter API credentials to start.
     - Check the terminal output for errors when running `x-twitter-mcp-server`.
     - Verify that `uv` or your Python executable is correctly installed and accessible.
 
@@ -420,10 +420,15 @@ Below is a list of all tools provided by the `x-twitter-mcp` server, along with 
     - Confirm the path in `claude_desktop_config.json` is correct.
     - Ensure the `command` and `args` point to the correct executable and script.
     - Restart Claude Desktop after updating the config file.
-    - Check Claude’s Developer Mode logs (Help → Enable Developer Mode → Open MCP Log File) for errors.
+    - Check Claude's Developer Mode logs (Help → Enable Developer Mode → Open MCP Log File) for errors.
 
 - **Rate Limit Errors**:
     - The server includes rate limit handling, but if you hit Twitter API limits, you may need to wait for the reset window (e.g., 15 minutes for tweet actions).
+
+- **Authentication Errors**:
+    - Ensure you provide all five required Twitter API credentials in each request.
+    - Verify your Twitter API credentials are valid and have the necessary permissions.
+    - Check that your Twitter Developer App has the required permissions enabled.
 
 - **Syntax Warnings**:
     - If you see `SyntaxWarning` messages from Tweepy, they are due to docstring issues in Tweepy with Python 3.13. The server includes a warning suppression to handle this.
