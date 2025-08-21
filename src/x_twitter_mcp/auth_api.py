@@ -557,6 +557,66 @@ async def get_server_info():
         }
     }
 
+# نقطة نهاية SSE لجلب قائمة الأدوات
+@auth_app.get("/ai/tools")
+async def get_ai_tools(
+    api_key: str = Query(..., description="API Key للتحقق")
+):
+    """جلب قائمة الأدوات المتاحة للـ AI Agent"""
+    
+    # التحقق من API Key
+    if api_key != os.getenv("API_SECRET_KEY", "default-key"):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    tools = [
+        {
+            "name": "add_twitter_account",
+            "description": "إضافة حساب Twitter جديد",
+            "parameters": {
+                "username": "string",
+                "description": "اسم المستخدم بدون @"
+            },
+            "example": "أضف حساب @username"
+        },
+        {
+            "name": "list_twitter_accounts", 
+            "description": "عرض جميع الحسابات المرتبطة",
+            "parameters": {},
+            "example": "عرض الحسابات"
+        },
+        {
+            "name": "test_twitter_account",
+            "description": "اختبار صحة حساب Twitter",
+            "parameters": {
+                "username": "string",
+                "description": "اسم المستخدم بدون @"
+            },
+            "example": "اختبر @username"
+        },
+        {
+            "name": "delete_twitter_account",
+            "description": "حذف حساب Twitter",
+            "parameters": {
+                "username": "string", 
+                "description": "اسم المستخدم بدون @"
+            },
+            "example": "احذف @username"
+        },
+        {
+            "name": "get_help",
+            "description": "عرض قائمة الأوامر المتاحة",
+            "parameters": {},
+            "example": "مساعدة"
+        }
+    ]
+    
+    return {
+        "success": True,
+        "tools": tools,
+        "count": len(tools),
+        "timestamp": time.time()
+    }
+
 # نقطة نهاية SSE للتواصل مع AI Agent
 @auth_app.get("/ai/stream")
 async def ai_stream(

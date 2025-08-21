@@ -13,6 +13,47 @@ class SSEManager:
         self.active_connections: Set[str] = set()
         self.connection_data: Dict[str, dict] = {}
         self.last_accounts_count = 0
+        self.tools = [
+            {
+                "name": "add_twitter_account",
+                "description": "إضافة حساب Twitter جديد",
+                "parameters": {
+                    "username": "string",
+                    "description": "اسم المستخدم بدون @"
+                },
+                "example": "أضف حساب @username"
+            },
+            {
+                "name": "list_twitter_accounts", 
+                "description": "عرض جميع الحسابات المرتبطة",
+                "parameters": {},
+                "example": "عرض الحسابات"
+            },
+            {
+                "name": "test_twitter_account",
+                "description": "اختبار صحة حساب Twitter",
+                "parameters": {
+                    "username": "string",
+                    "description": "اسم المستخدم بدون @"
+                },
+                "example": "اختبر @username"
+            },
+            {
+                "name": "delete_twitter_account",
+                "description": "حذف حساب Twitter",
+                "parameters": {
+                    "username": "string", 
+                    "description": "اسم المستخدم بدون @"
+                },
+                "example": "احذف @username"
+            },
+            {
+                "name": "get_help",
+                "description": "عرض قائمة الأوامر المتاحة",
+                "parameters": {},
+                "example": "مساعدة"
+            }
+        ]
         
     async def event_stream(self, connection_id: str, api_key: str):
         """دفق الأحداث للـ AI Agent"""
@@ -27,6 +68,9 @@ class SSEManager:
             
             # إرسال رسالة ترحيب
             yield f"data: {json.dumps({'type': 'connection', 'message': 'تم الاتصال بنجاح', 'connection_id': connection_id})}\n\n"
+            
+            # إرسال قائمة الأدوات المتاحة
+            yield f"data: {json.dumps({'type': 'tools_available', 'tools': self.tools, 'count': len(self.tools)})}\n\n"
             
             # مراقبة التغييرات في قاعدة البيانات
             while connection_id in self.active_connections:
@@ -44,8 +88,11 @@ class SSEManager:
                     if connection_id in self.connection_data:
                         self.connection_data[connection_id]["last_activity"] = time.time()
                     
+                    # إرسال نبض للحفاظ على الاتصال
+                    yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
+                    
                     # انتظار قبل الفحص التالي
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(30)  # إرسال نبض كل 30 ثانية
                     
                 except Exception as e:
                     # إرسال خطأ
@@ -86,6 +133,10 @@ class SSEManager:
         # في التنفيذ الحقيقي، ستقوم بإرسال الرسالة لجميع الاتصالات
         # هنا نطبع الرسالة للتوضيح
         print(f"Broadcasting message: {message}")
+    
+    def get_tools(self) -> List[dict]:
+        """الحصول على قائمة الأدوات المتاحة"""
+        return self.tools
 
 # إنشاء مدير SSE عام
 sse_manager = SSEManager()
