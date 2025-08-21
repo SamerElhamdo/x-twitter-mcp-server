@@ -557,6 +557,88 @@ async def get_server_info():
         }
     }
 
+# نقطة نهاية سريعة للأدوات (بدون تحقق)
+@auth_app.get("/tools")
+async def get_tools_fast():
+    """نقطة نهاية سريعة لجلب الأدوات بدون تحقق"""
+    
+    tools = [
+        {
+            "name": "add_twitter_account",
+            "description": "إضافة حساب Twitter جديد",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            },
+            "example": "أضف حساب @username"
+        },
+        {
+            "name": "list_twitter_accounts", 
+            "description": "عرض جميع الحسابات المرتبطة",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
+            "example": "عرض الحسابات"
+        },
+        {
+            "name": "test_twitter_account",
+            "description": "اختبار صحة حساب Twitter",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            },
+            "example": "اختبر @username"
+        },
+        {
+            "name": "delete_twitter_account",
+            "description": "حذف حساب Twitter",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string", 
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            },
+            "example": "احذف @username"
+        },
+        {
+            "name": "get_help",
+            "description": "عرض قائمة الأوامر المتاحة",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
+            "example": "مساعدة"
+        }
+    ]
+    
+    return {
+        "success": True,
+        "tools": tools,
+        "count": len(tools),
+        "timestamp": time.time(),
+        "version": "1.0.0",
+        "description": "Twitter MCP Server Tools for AI Agent"
+    }
+
 # نقطة نهاية SSE لجلب قائمة الأدوات
 @auth_app.get("/ai/tools")
 async def get_ai_tools(
@@ -573,23 +655,39 @@ async def get_ai_tools(
             "name": "add_twitter_account",
             "description": "إضافة حساب Twitter جديد",
             "parameters": {
-                "username": "string",
-                "description": "اسم المستخدم بدون @"
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
             },
             "example": "أضف حساب @username"
         },
         {
             "name": "list_twitter_accounts", 
             "description": "عرض جميع الحسابات المرتبطة",
-            "parameters": {},
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
             "example": "عرض الحسابات"
         },
         {
             "name": "test_twitter_account",
             "description": "اختبار صحة حساب Twitter",
             "parameters": {
-                "username": "string",
-                "description": "اسم المستخدم بدون @"
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
             },
             "example": "اختبر @username"
         },
@@ -597,15 +695,25 @@ async def get_ai_tools(
             "name": "delete_twitter_account",
             "description": "حذف حساب Twitter",
             "parameters": {
-                "username": "string", 
-                "description": "اسم المستخدم بدون @"
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string", 
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
             },
             "example": "احذف @username"
         },
         {
             "name": "get_help",
             "description": "عرض قائمة الأوامر المتاحة",
-            "parameters": {},
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
             "example": "مساعدة"
         }
     ]
@@ -614,7 +722,9 @@ async def get_ai_tools(
         "success": True,
         "tools": tools,
         "count": len(tools),
-        "timestamp": time.time()
+        "timestamp": time.time(),
+        "version": "1.0.0",
+        "description": "Twitter MCP Server Tools for AI Agent"
     }
 
 # نقطة نهاية SSE للتواصل مع AI Agent
