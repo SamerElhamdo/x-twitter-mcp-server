@@ -40,34 +40,34 @@ class TwitterOAuthManager:
         return state
     
     def get_simple_oauth_url(self) -> str:
-        """إنشاء رابط OAuth بسيط بدون PKCE (لحل مشكلة redirect_after_login)
+        """إنشاء رابط OAuth 2.0 صحيح (لحل مشكلة redirect_after_login)
         
         Returns:
-            str: رابط المصادقة البسيط
+            str: رابط المصادقة الصحيح
         """
         if not self.client_id:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
-        # معاملات المصادقة البسيطة (بدون PKCE)
+        # معاملات OAuth 2.0 الصحيحة
         params = {
             "response_type": "code",
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
             "scope": "tweet.read tweet.write users.read follows.read offline.access",
-            "force_login": "false"
+            "state": self.generate_oauth_state()
         }
         
-        # إنشاء رابط المصادقة البسيط
+        # إنشاء رابط المصادقة الصحيح
         auth_url = f"{self.authorization_url}?{urlencode(params)}"
         return auth_url
     
     def get_public_oauth_url(self) -> str:
-        """إنشاء رابط OAuth عام للجميع
+        """إنشاء رابط OAuth 2.0 عام للجميع
         
         Returns:
             str: رابط المصادقة العام
         """
-        # استخدام الرابط البسيط لحل مشكلة redirect_after_login
+        # استخدام الرابط الصحيح لحل مشكلة redirect_after_login
         return self.get_simple_oauth_url()
     
     def get_authorization_url(self, username: str) -> Tuple[str, str]:
@@ -94,17 +94,13 @@ class TwitterOAuthManager:
             "timestamp": int(os.time())
         }
         
-        # معاملات المصادقة مع OAuth 2.0 الصحيح
+        # معاملات OAuth 2.0 الصحيحة
         params = {
             "response_type": "code",
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
             "scope": "tweet.read tweet.write users.read follows.read offline.access",
-            "state": state,
-            "code_challenge_method": "S256",
-            "code_challenge": self._generate_code_challenge(),
-            "force_login": "false",
-            "lang": "en"
+            "state": state
         }
         
         # إنشاء رابط المصادقة
@@ -238,7 +234,7 @@ class TwitterOAuthManager:
             }
     
     def _generate_code_challenge(self) -> str:
-        """إنشاء code challenge لـ PKCE"""
+        """إنشاء code challenge لـ PKCE (غير مستخدم حالياً)"""
         # في الإنتاج، استخدم مكتبة مناسبة لـ PKCE
         import hashlib
         import base64
