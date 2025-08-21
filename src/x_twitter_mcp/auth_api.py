@@ -634,6 +634,185 @@ async def get_n8n_tools():
         }
     ]
 
+# نقطة نهاية بسيطة جداً لـ n8n
+@auth_app.get("/n8n/simple")
+async def get_n8n_simple():
+    """نقطة نهاية بسيطة جداً لـ n8n"""
+    
+    return [
+        {
+            "name": "add_account",
+            "description": "إضافة حساب Twitter"
+        },
+        {
+            "name": "list_accounts",
+            "description": "عرض الحسابات"
+        },
+        {
+            "name": "test_account",
+            "description": "اختبار الحساب"
+        },
+        {
+            "name": "delete_account",
+            "description": "حذف الحساب"
+        },
+        {
+            "name": "help",
+            "description": "المساعدة"
+        }
+    ]
+
+# نقطة نهاية متوافقة تماماً مع n8n
+@auth_app.get("/n8n/tools-compatible")
+async def get_n8n_tools_compatible():
+    """نقطة نهاية متوافقة تماماً مع n8n"""
+    
+    return [
+        {
+            "name": "add_twitter_account",
+            "displayName": "إضافة حساب Twitter",
+            "description": "إضافة حساب Twitter جديد",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "اسم المستخدم",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            },
+            "execute": {
+                "type": "function",
+                "function": {
+                    "name": "add_twitter_account",
+                    "description": "إضافة حساب Twitter جديد",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "username": {
+                                "type": "string",
+                                "description": "اسم المستخدم بدون @"
+                            }
+                        },
+                        "required": ["username"]
+                    }
+                }
+            }
+        },
+        {
+            "name": "list_twitter_accounts", 
+            "displayName": "عرض الحسابات",
+            "description": "عرض جميع الحسابات المرتبطة",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
+            "execute": {
+                "type": "function",
+                "function": {
+                    "name": "list_twitter_accounts",
+                    "description": "عرض جميع الحسابات المرتبطة",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": []
+                    }
+                }
+            }
+        },
+        {
+            "name": "test_twitter_account",
+            "displayName": "اختبار الحساب",
+            "description": "اختبار صحة حساب Twitter",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "اسم المستخدم",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            },
+            "execute": {
+                "type": "function",
+                "function": {
+                    "name": "test_twitter_account",
+                    "description": "اختبار صحة حساب Twitter",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "username": {
+                                "type": "string",
+                                "description": "اسم المستخدم بدون @"
+                            }
+                        },
+                        "required": ["username"]
+                    }
+                }
+            }
+        },
+        {
+            "name": "delete_twitter_account",
+            "displayName": "حذف الحساب",
+            "description": "حذف حساب Twitter",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "اسم المستخدم",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            },
+            "execute": {
+                "type": "function",
+                "function": {
+                    "name": "delete_twitter_account",
+                    "description": "حذف حساب Twitter",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "username": {
+                                "type": "string",
+                                "description": "اسم المستخدم بدون @"
+                            }
+                        },
+                        "required": ["username"]
+                    }
+                }
+            }
+        },
+        {
+            "name": "get_help",
+            "displayName": "المساعدة",
+            "description": "عرض قائمة الأوامر المتاحة",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
+            "execute": {
+                "type": "function",
+                "function": {
+                    "name": "get_help",
+                    "description": "عرض قائمة الأوامر المتاحة",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": []
+                    }
+                }
+            }
+        }
+    ]
+
 # نقطة نهاية بديلة لـ n8n
 @auth_app.get("/n8n/tools-alt")
 async def get_n8n_tools_alt():
