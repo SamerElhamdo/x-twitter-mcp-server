@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from typing import Optional, List
 import json
@@ -16,6 +16,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # إنشاء قاعدة النماذج
 Base = declarative_base()
 
+def get_utc_now():
+    """الحصول على الوقت الحالي في UTC"""
+    return datetime.now(timezone.utc)
+
 class TwitterAccount(Base):
     """نموذج حساب Twitter"""
     __tablename__ = "twitter_accounts"
@@ -27,8 +31,8 @@ class TwitterAccount(Base):
     access_token_secret = Column(String, nullable=False)
     bearer_token = Column(String, nullable=False)
     display_name = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_used = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
+    last_used = Column(DateTime, default=get_utc_now)
     is_active = Column(Boolean, default=True)
     
     def to_dict(self):
@@ -100,7 +104,7 @@ class DatabaseManager:
                     existing.access_token_secret = access_token_secret
                     existing.bearer_token = bearer_token
                     existing.display_name = display_name or username
-                    existing.last_used = datetime.utcnow()
+                    existing.last_used = get_utc_now()
                     existing.is_active = True
                 else:
                     # إنشاء حساب جديد
@@ -132,7 +136,7 @@ class DatabaseManager:
                 
                 if account:
                     # تحديث آخر استخدام
-                    account.last_used = datetime.utcnow()
+                    account.last_used = get_utc_now()
                     session.commit()
                     
                     # إرجاع نسخة نظيفة من الكائن

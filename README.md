@@ -433,3 +433,9 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 ## Author
 
 - **Rafal Janicki** - [rafal@kult.io](mailto:rafal@kult.io)
+
+
+to run mcp as sse use this command
+mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python run_server.py
+
+can accses it http://ip:port/sse

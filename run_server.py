@@ -1,22 +1,57 @@
 #!/usr/bin/env python3
 """
-Simple script to run the Twitter MCP server
+Twitter MCP Server Runner - محسن للأداء السريع
 """
 
+import asyncio
+import logging
 import sys
 import os
+from pathlib import Path
 
-# إضافة مجلد src إلى Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+# إضافة المسار للوحدات
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-try:
-    from x_twitter_mcp.server import run
-    print("🚀 بدء تشغيل Twitter MCP Server...")
-    run()
-except ImportError as e:
-    print(f"❌ خطأ في استيراد المكتبات: {e}")
-    print("💡 تأكد من تثبيت المتطلبات: pip install -r requirements.txt")
-    sys.exit(1)
-except Exception as e:
-    print(f"❌ خطأ في التشغيل: {e}")
-    sys.exit(1)
+# إعدادات logging محسنة
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('mcp_server.log')
+    ]
+)
+
+# إيقاف warnings غير الضرورية
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('requests').setLevel(logging.WARNING)
+
+async def main():
+    """الدالة الرئيسية"""
+    try:
+        from x_twitter_mcp.server import run
+        
+        print("🚀 بدء تشغيل Twitter MCP Server...")
+        print("📊 إعدادات محسنة للأداء السريع")
+        print("🔧 إصلاح DeprecationWarning")
+        print("⚡ تحسين الاستجابة")
+        print()
+        
+        # تشغيل الخادم
+        await run()
+        
+    except KeyboardInterrupt:
+        print("\n🛑 تم إيقاف الخادم بواسطة المستخدم")
+    except Exception as e:
+        print(f"❌ خطأ في تشغيل الخادم: {e}")
+        logging.error(f"خطأ في التشغيل: {e}", exc_info=True)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    # إعدادات Python محسنة
+    import warnings
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    
+    # تشغيل الخادم
+    asyncio.run(main())
