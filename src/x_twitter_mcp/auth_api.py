@@ -14,6 +14,7 @@ import time
 import os
 import json
 import secrets
+import asyncio
 
 # إنشاء تطبيق FastAPI
 auth_app = FastAPI(
@@ -977,118 +978,64 @@ async def get_tools_fast():
         "description": "Twitter MCP Server Tools for AI Agent"
     }
 
-# نقطة نهاية SSE لجلب قائمة الأدوات
-@auth_app.get("/ai/tools")
-async def get_ai_tools(
-    api_key: str = Query(..., description="API Key للتحقق")
-):
-    """جلب قائمة الأدوات المتاحة للـ AI Agent"""
-    
-    # التحقق من API Key
-    if api_key != os.getenv("API_SECRET_KEY", "default-key"):
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    
-    tools = [
-        {
-            "name": "add_twitter_account",
-            "description": "إضافة حساب Twitter جديد",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "example": "أضف حساب @username"
-        },
-        {
-            "name": "list_twitter_accounts", 
-            "description": "عرض جميع الحسابات المرتبطة",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            },
-            "example": "عرض الحسابات"
-        },
-        {
-            "name": "test_twitter_account",
-            "description": "اختبار صحة حساب Twitter",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "example": "اختبر @username"
-        },
-        {
-            "name": "delete_twitter_account",
-            "description": "حذف حساب Twitter",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string", 
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "example": "احذف @username"
-        },
-        {
-            "name": "get_help",
-            "description": "عرض قائمة الأوامر المتاحة",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            },
-            "example": "مساعدة"
-        }
-    ]
-    
-    return {
-        "success": True,
-        "tools": tools,
-        "count": len(tools),
-        "timestamp": time.time(),
-        "version": "1.0.0",
-        "description": "Twitter MCP Server Tools for AI Agent"
-    }
-
-# نقطة نهاية SSE للتواصل مع AI Agent
-@auth_app.get("/ai/stream")
-async def ai_stream(
+# نقطة نهاية SSE للأدوات (متوافقة مع n8n)
+@auth_app.get("/ai/tools-stream")
+async def ai_tools_stream(
     request: Request,
     api_key: str = Query(..., description="API Key للتحقق")
 ):
-    """نقطة نهاية SSE للتواصل مع AI Agent في n8n"""
+    """نقطة نهاية SSE للأدوات متوافقة مع n8n"""
     
     # التحقق من API Key
     if api_key != os.getenv("API_SECRET_KEY", "default-key"):
         raise HTTPException(status_code=401, detail="Invalid API key")
     
-    # إنشاء معرف فريد للاتصال
-    connection_id = secrets.token_urlsafe(16)
+    async def tools_stream():
+        # إرسال الأدوات كـ SSE events
+        tools = [
+            {
+                "name": "add_twitter_account",
+                "displayName": "إضافة حساب Twitter",
+                "description": "إضافة حساب Twitter جديد"
+            },
+            {
+                "name": "list_twitter_accounts", 
+                "displayName": "عرض الحسابات",
+                "description": "عرض جميع الحسابات المرتبطة"
+            },
+            {
+                "name": "test_twitter_account",
+                "displayName": "اختبار الحساب",
+                "description": "اختبار صحة حساب Twitter"
+            },
+            {
+                "name": "delete_twitter_account",
+                "displayName": "حذف الحساب",
+                "description": "حذف حساب Twitter"
+            },
+            {
+                "name": "get_help",
+                "displayName": "المساعدة",
+                "description": "عرض قائمة الأوامر المتاحة"
+            }
+        ]
+        
+        # إرسال الأدوات
+        yield f"data: {json.dumps({'type': 'tools_available', 'tools': tools})}\n\n"
+        
+        # إرسال نبض للحفاظ على الاتصال
+        while True:
+            await asyncio.sleep(30)
+            yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
     
     return StreamingResponse(
-        sse_manager.event_stream(connection_id, api_key),
+        tools_stream(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Cache-Control",
-            "X-Connection-ID": connection_id
+            "Access-Control-Allow-Headers": "Cache-Control"
         }
     )
 
@@ -1175,6 +1122,60 @@ async def broadcast_message(
             "success": False,
             "error": str(e)
         }
+
+# نقطة نهاية SSE للأدوات بدون تحقق
+@auth_app.get("/ai/tools-stream-public")
+async def ai_tools_stream_public():
+    """نقطة نهاية SSE للأدوات بدون تحقق"""
+    
+    async def tools_stream():
+        # إرسال الأدوات كـ SSE events
+        tools = [
+            {
+                "name": "add_twitter_account",
+                "displayName": "إضافة حساب Twitter",
+                "description": "إضافة حساب Twitter جديد"
+            },
+            {
+                "name": "list_twitter_accounts", 
+                "displayName": "عرض الحسابات",
+                "description": "عرض جميع الحسابات المرتبطة"
+            },
+            {
+                "name": "test_twitter_account",
+                "displayName": "اختبار الحساب",
+                "description": "اختبار صحة حساب Twitter"
+            },
+            {
+                "name": "delete_twitter_account",
+                "displayName": "حذف الحساب",
+                "description": "حذف حساب Twitter"
+            },
+            {
+                "name": "get_help",
+                "displayName": "المساعدة",
+                "description": "عرض قائمة الأوامر المتاحة"
+            }
+        ]
+        
+        # إرسال الأدوات
+        yield f"data: {json.dumps({'type': 'tools_available', 'tools': tools})}\n\n"
+        
+        # إرسال نبض للحفاظ على الاتصال
+        while True:
+            await asyncio.sleep(30)
+            yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
+    
+    return StreamingResponse(
+        tools_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Cache-Control"
+        }
+    )
 
 def start_auth_server(host: str = "127.0.0.1", port: int = 8000):
     """بدء تشغيل خادم المصادقة"""
