@@ -50,6 +50,21 @@ class TwitterAccount(Base):
             "access_token_secret": self.access_token_secret,
             "bearer_token": self.bearer_token
         }
+    
+    def copy(self):
+        """إنشاء نسخة نظيفة من الكائن"""
+        return TwitterAccount(
+            username=self.username,
+            api_key=self.api_key,
+            api_secret=self.api_secret,
+            access_token=self.access_token,
+            access_token_secret=self.access_token_secret,
+            bearer_token=self.bearer_token,
+            display_name=self.display_name,
+            created_at=self.created_at,
+            last_used=self.last_used,
+            is_active=self.is_active
+        )
 
 class DatabaseManager:
     """مدير قاعدة البيانات"""
@@ -119,8 +134,11 @@ class DatabaseManager:
                     # تحديث آخر استخدام
                     account.last_used = datetime.utcnow()
                     session.commit()
+                    
+                    # إرجاع نسخة نظيفة من الكائن
+                    return account.copy()
                 
-                return account
+                return None
         except Exception as e:
             print(f"خطأ في الحصول على الحساب: {e}")
             return None
@@ -132,7 +150,9 @@ class DatabaseManager:
                 accounts = session.query(TwitterAccount).filter(
                     TwitterAccount.is_active == True
                 ).all()
-                return accounts
+                
+                # إرجاع نسخ نظيفة من الكائنات
+                return [account.copy() for account in accounts]
         except Exception as e:
             print(f"خطأ في الحصول على الحسابات: {e}")
             return []
