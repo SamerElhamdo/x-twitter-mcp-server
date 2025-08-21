@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, Request, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -7,9 +7,13 @@ from typing import List, Optional
 import uvicorn
 from .database import db_manager, TwitterAccount
 from .oauth_manager import oauth_manager
+from .sse_manager import sse_manager
+from .ai_processor import ai_processor
 import threading
 import time
 import os
+import json
+import secrets
 
 # إنشاء تطبيق FastAPI
 auth_app = FastAPI(
@@ -552,6 +556,117 @@ async def get_server_info():
             "api_docs": "GET /docs"
         }
     }
+
+# نقطة نهاية SSE للتواصل مع AI Agent
+@auth_app.get("/ai/stream")
+async def ai_stream(
+    request: Request,
+    api_key: str = Query(..., description="API Key للتحقق")
+):
+    """نقطة نهاية SSE للتواصل مع AI Agent في n8n"""
+    
+    # التحقق من API Key
+    if api_key != os.getenv("API_SECRET_KEY", "default-key"):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    # إنشاء معرف فريد للاتصال
+    connection_id = secrets.token_urlsafe(16)
+    
+    return StreamingResponse(
+        sse_manager.event_stream(connection_id, api_key),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Cache-Control",
+            "X-Connection-ID": connection_id
+        }
+    )
+
+# نقطة نهاية لمعالجة طلبات AI
+@auth_app.post("/ai/process")
+async def process_ai_request(
+    request: Request,
+    api_key: str = Query(..., description="API Key للتحقق")
+):
+    """معالجة طلبات AI من n8n"""
+    
+    # التحقق من API Key
+    if api_key != os.getenv("API_SECRET_KEY", "default-key"):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    try:
+        body = await request.json()
+        ai_message = body.get("message", "")
+        user_id = body.get("user_id", "unknown")
+        
+        # معالجة الرسالة
+        response = await ai_processor.process_message(ai_message, user_id)
+        
+        return response
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+# نقطة نهاية لعرض معلومات الاتصالات النشطة
+@auth_app.get("/ai/connections")
+async def get_connections(
+    api_key: str = Query(..., description="API Key للتحقق")
+):
+    """عرض معلومات الاتصالات النشطة"""
+    
+    # التحقق من API Key
+    if api_key != os.getenv("API_SECRET_KEY", "default-key"):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    return sse_manager.get_connection_info()
+
+# نقطة نهاية لإرسال رسالة لجميع الاتصالات
+@auth_app.post("/ai/broadcast")
+async def broadcast_message(
+    request: Request,
+    api_key: str = Query(..., description="API Key للتحقق")
+):
+    """إرسال رسالة لجميع الاتصالات النشطة"""
+    
+    # التحقق من API Key
+    if api_key != os.getenv("API_SECRET_KEY", "default-key"):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    try:
+        body = await request.json()
+        message = body.get("message", "")
+        message_type = body.get("type", "info")
+        
+        if not message:
+            return {
+                "success": False,
+                "error": "الرسالة مطلوبة"
+            }
+        
+        # إرسال الرسالة
+        sse_manager.broadcast_message({
+            "type": message_type,
+            "message": message,
+            "timestamp": time.time()
+        })
+        
+        return {
+            "success": True,
+            "message": "تم إرسال الرسالة لجميع الاتصالات النشطة",
+            "connections_count": len(sse_manager.active_connections)
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 def start_auth_server(host: str = "127.0.0.1", port: int = 8000):
     """بدء تشغيل خادم المصادقة"""
