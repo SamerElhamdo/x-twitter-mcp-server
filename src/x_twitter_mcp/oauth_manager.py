@@ -14,24 +14,20 @@ except ImportError:
     pass
 
 class TwitterOAuthManager:
-    """مدير مصادقة OAuth لـ Twitter"""
+    """مدير مصادقة OAuth 1.0a لـ Twitter (مثل التطبيق الذي يعمل)"""
     
     def __init__(self):
-        # يجب تعيين هذه المتغيرات في البيئة أو ملف التكوين
-        self.client_id = os.getenv("TWITTER_CLIENT_ID", "")
-        self.client_secret = os.getenv("TWITTER_CLIENT_SECRET", "")
+        # استخدام API Key و API Secret مباشرة
+        self.api_key = os.getenv("TWITTER_API_KEY", "")
+        self.api_secret = os.getenv("TWITTER_API_SECRET", "")
         self.redirect_uri = os.getenv("TWITTER_REDIRECT_URI", "http://localhost:8000/auth/callback")
         
         # قاعدة بيانات للجلسات المؤقتة
         self.oauth_states = {}  # في الإنتاج، استخدم Redis أو قاعدة بيانات
         
-        # Twitter OAuth endpoints
-        self.authorization_url = "https://twitter.com/i/oauth2/authorize"
-        self.token_url = "https://api.twitter.com/2/oauth2/token"
-        
         # التحقق من التكوين
-        if not self.client_id or not self.client_secret:
-            print("⚠️  تحذير: TWITTER_CLIENT_ID أو TWITTER_CLIENT_SECRET غير محدد")
+        if not self.api_key or not self.api_secret:
+            print("⚠️  تحذير: TWITTER_API_KEY أو TWITTER_API_SECRET غير محدد")
             print("💡 تأكد من إعداد ملف .env أو متغيرات البيئة")
         
     def generate_oauth_state(self) -> str:
@@ -40,29 +36,32 @@ class TwitterOAuthManager:
         return state
     
     def get_simple_oauth_url(self) -> str:
-        """إنشاء رابط OAuth 2.0 صحيح (لحل مشكلة redirect_after_login)
+        """إنشاء رابط OAuth 1.0a (مثل التطبيق الذي يعمل)
         
         Returns:
             str: رابط المصادقة الصحيح
         """
-        if not self.client_id:
-            raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
+        if not self.api_key:
+            raise ValueError("TWITTER_API_KEY غير محدد. يرجى إعداده في ملف .env")
         
-        # معاملات OAuth 2.0 الصحيحة
-        params = {
-            "response_type": "code",
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
-            "scope": "tweet.read tweet.write users.read follows.read offline.access",
-            "state": self.generate_oauth_state()
-        }
+        if not self.api_secret:
+            raise ValueError("TWITTER_API_SECRET غير محدد. يرجى إعداده في ملف .env")
         
-        # إنشاء رابط المصادقة الصحيح
-        auth_url = f"{self.authorization_url}?{urlencode(params)}"
-        return auth_url
+        try:
+            # استخدام Tweepy OAuth 1.0a (مثل التطبيق الذي يعمل)
+            auth = tweepy.OAuthHandler(self.api_key, self.api_secret)
+            redirect_url = auth.get_authorization_url()
+            
+            # حفظ request_token للاستخدام لاحقاً
+            self.oauth_states['request_token'] = auth.request_token
+            
+            return redirect_url
+            
+        except Exception as e:
+            raise ValueError(f"خطأ في إنشاء رابط المصادقة: {str(e)}")
     
     def get_public_oauth_url(self) -> str:
-        """إنشاء رابط OAuth 2.0 عام للجميع
+        """إنشاء رابط OAuth 1.0a عام للجميع
         
         Returns:
             str: رابط المصادقة العام
@@ -79,59 +78,56 @@ class TwitterOAuthManager:
         Returns:
             Tuple[str, str]: (رابط المصادقة، حالة OAuth)
         """
-        if not self.client_id:
-            raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
+        if not self.api_key:
+            raise ValueError("TWITTER_API_KEY غير محدد. يرجى إعداده في ملف .env")
         
-        if not self.client_secret:
-            raise ValueError("TWITTER_CLIENT_SECRET غير محدد. يرجى إعداده في ملف .env")
+        if not self.api_secret:
+            raise ValueError("TWITTER_API_SECRET غير محدد. يرجى إعداده في ملف .env")
         
         # إنشاء حالة OAuth
         state = self.generate_oauth_state()
         
-        # حفظ الحالة مع اسم المستخدم
-        self.oauth_states[state] = {
-            "username": username,
-            "timestamp": int(os.time())
-        }
-        
-        # معاملات OAuth 2.0 الصحيحة
-        params = {
-            "response_type": "code",
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
-            "scope": "tweet.read tweet.write users.read follows.read offline.access",
-            "state": state
-        }
-        
-        # إنشاء رابط المصادقة
-        auth_url = f"{self.authorization_url}?{urlencode(params)}"
-        
-        return auth_url, state
+        try:
+            # استخدام Tweepy OAuth 1.0a
+            auth = tweepy.OAuthHandler(self.api_key, self.api_secret)
+            redirect_url = auth.get_authorization_url()
+            
+            # حفظ الحالة مع اسم المستخدم
+            self.oauth_states[state] = {
+                "username": username,
+                "timestamp": int(os.time()),
+                "request_token": auth.request_token
+            }
+            
+            return redirect_url, state
+            
+        except Exception as e:
+            raise ValueError(f"خطأ في إنشاء رابط المصادقة: {str(e)}")
     
-    def handle_public_callback(self, code: str) -> Dict:
-        """معالجة callback من Twitter OAuth بدون username محدد
+    def handle_public_callback(self, oauth_token: str, oauth_verifier: str) -> Dict:
+        """معالجة callback من Twitter OAuth 1.0a بدون username محدد
         
         Args:
-            code (str): رمز المصادقة من Twitter
+            oauth_token (str): رمز OAuth من Twitter
+            oauth_verifier (str): رمز التحقق من Twitter
             
         Returns:
             Dict: نتيجة المصادقة
         """
         try:
-            # استبدال رمز المصادقة بـ access token
-            token_response = self._exchange_code_for_token(code)
+            # استخدام Tweepy للحصول على access token
+            auth = tweepy.OAuthHandler(self.api_key, self.api_secret)
+            auth.request_token = {'oauth_token': oauth_token, 'oauth_token_secret': oauth_verifier}
             
-            if not token_response.get("access_token"):
-                return {
-                    "success": False,
-                    "error": "فشل في الحصول على access token"
-                }
+            # الحصول على access token
+            auth.get_access_token(oauth_verifier)
             
-            # الحصول على معلومات المستخدم
-            user_info = self._get_user_info(token_response["access_token"])
+            # إنشاء API client للحصول على معلومات المستخدم
+            api = tweepy.API(auth, wait_on_rate_limit=True)
+            user_info = api.verify_credentials()
             
             # استخدام username من Twitter
-            twitter_username = user_info.get("username", "")
+            twitter_username = user_info.screen_name
             if not twitter_username:
                 return {
                     "success": False,
@@ -141,19 +137,23 @@ class TwitterOAuthManager:
             # حفظ الحساب في قاعدة البيانات
             success = db_manager.add_account(
                 username=twitter_username,
-                api_key=self.client_id,
-                api_secret=self.client_secret,
-                access_token=token_response["access_token"],
-                access_token_secret="",  # OAuth 2.0 لا يستخدم access_token_secret
-                bearer_token=token_response.get("access_token", ""),
-                display_name=user_info.get("name", twitter_username)
+                api_key=self.api_key,
+                api_secret=self.api_secret,
+                access_token=auth.access_token,
+                access_token_secret=auth.access_token_secret,
+                bearer_token="",  # OAuth 1.0a لا يستخدم bearer_token
+                display_name=user_info.name or twitter_username
             )
             
             if success:
                 return {
                     "success": True,
                     "message": f"تم إضافة الحساب '@{twitter_username}' بنجاح",
-                    "user_info": user_info,
+                    "user_info": {
+                        "username": user_info.screen_name,
+                        "name": user_info.name,
+                        "id": user_info.id
+                    },
                     "username": twitter_username
                 }
             else:
@@ -168,11 +168,12 @@ class TwitterOAuthManager:
                 "error": f"خطأ في المصادقة: {str(e)}"
             }
     
-    def handle_callback(self, code: str, state: str) -> Dict:
-        """معالجة callback من Twitter OAuth مع username محدد
+    def handle_callback(self, oauth_token: str, oauth_verifier: str, state: str) -> Dict:
+        """معالجة callback من Twitter OAuth 1.0a مع username محدد
         
         Args:
-            code (str): رمز المصادقة من Twitter
+            oauth_token (str): رمز OAuth من Twitter
+            oauth_verifier (str): رمز التحقق من Twitter
             state (str): حالة OAuth
             
         Returns:
@@ -189,27 +190,26 @@ class TwitterOAuthManager:
         username = oauth_data["username"]
         
         try:
-            # استبدال رمز المصادقة بـ access token
-            token_response = self._exchange_code_for_token(code)
+            # استخدام Tweepy للحصول على access token
+            auth = tweepy.OAuthHandler(self.api_key, self.api_secret)
+            auth.request_token = {'oauth_token': oauth_token, 'oauth_token_secret': oauth_verifier}
             
-            if not token_response.get("access_token"):
-                return {
-                    "success": False,
-                    "error": "فشل في الحصول على access token"
-                }
+            # الحصول على access token
+            auth.get_access_token(oauth_verifier)
             
-            # الحصول على معلومات المستخدم
-            user_info = self._get_user_info(token_response["access_token"])
+            # إنشاء API client للحصول على معلومات المستخدم
+            api = tweepy.API(auth, wait_on_rate_limit=True)
+            user_info = api.verify_credentials()
             
             # حفظ الحساب في قاعدة البيانات
             success = db_manager.add_account(
                 username=username,
-                api_key=self.client_id,
-                api_secret=self.client_secret,
-                access_token=token_response["access_token"],
-                access_token_secret="",  # OAuth 2.0 لا يستخدم access_token_secret
-                bearer_token=token_response.get("access_token", ""),
-                display_name=user_info.get("name", username)
+                api_key=self.api_key,
+                api_secret=self.api_secret,
+                access_token=auth.access_token,
+                access_token_secret=auth.access_token_secret,
+                bearer_token="",  # OAuth 1.0a لا يستخدم bearer_token
+                display_name=user_info.name or username
             )
             
             if success:
@@ -219,7 +219,11 @@ class TwitterOAuthManager:
                 return {
                     "success": True,
                     "message": f"تم إضافة الحساب '{username}' بنجاح",
-                    "user_info": user_info
+                    "user_info": {
+                        "username": user_info.screen_name,
+                        "name": user_info.name,
+                        "id": user_info.id
+                    }
                 }
             else:
                 return {
@@ -233,76 +237,6 @@ class TwitterOAuthManager:
                 "error": f"خطأ في المصادقة: {str(e)}"
             }
     
-    def _generate_code_challenge(self) -> str:
-        """إنشاء code challenge لـ PKCE (غير مستخدم حالياً)"""
-        # في الإنتاج، استخدم مكتبة مناسبة لـ PKCE
-        import hashlib
-        import base64
-        
-        code_verifier = secrets.token_urlsafe(32)
-        code_challenge = base64.urlsafe_b64encode(
-            hashlib.sha256(code_verifier.encode()).digest()
-        ).decode().rstrip('=')
-        
-        # حفظ code_verifier مع الحالة
-        return code_challenge
-    
-    def _exchange_code_for_token(self, code: str) -> Dict:
-        """استبدال رمز المصادقة بـ access token"""
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Basic {self._get_basic_auth()}"
-        }
-        
-        data = {
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": self.redirect_uri
-        }
-        
-        response = requests.post(self.token_url, headers=headers, data=data)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f"فشل في استبدال الرمز: {response.text}")
-    
-    def _get_basic_auth(self) -> str:
-        """إنشاء Basic Auth header"""
-        import base64
-        credentials = f"{self.client_id}:{self.client_secret}"
-        encoded = base64.b64encode(credentials.encode()).decode()
-        return encoded
-    
-    def _get_user_info(self, access_token: str) -> Dict:
-        """الحصول على معلومات المستخدم من Twitter"""
-        headers = {
-            "Authorization": f"Bearer {access_token}"
-        }
-        
-        response = requests.get(
-            "https://api.twitter.com/2/users/me",
-            headers=headers
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("data", {})
-        else:
-            raise Exception(f"فشل في الحصول على معلومات المستخدم: {response.text}")
-    
-    def get_public_auth_url(self, username: str) -> str:
-        """إنشاء رابط مصادقة عام للمستخدمين
-        
-        Args:
-            username (str): اسم المستخدم المطلوب
-            
-        Returns:
-            str: رابط المصادقة العام
-        """
-        auth_url, _ = self.get_authorization_url(username)
-        return auth_url
-    
     def cleanup_expired_states(self):
         """تنظيف الحالات المنتهية الصلاحية"""
         import time
@@ -310,8 +244,9 @@ class TwitterOAuthManager:
         expired_states = []
         
         for state, data in self.oauth_states.items():
-            if current_time - data["timestamp"] > 3600:  # ساعة واحدة
-                expired_states.append(state)
+            if isinstance(data, dict) and "timestamp" in data:
+                if current_time - data["timestamp"] > 3600:  # ساعة واحدة
+                    expired_states.append(state)
         
         for state in expired_states:
             del self.oauth_states[state]

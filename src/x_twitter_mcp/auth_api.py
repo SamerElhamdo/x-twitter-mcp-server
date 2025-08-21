@@ -57,284 +57,164 @@ class OAuthRequest(BaseModel):
 # الصفحة الرئيسية
 @auth_app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """الصفحة الرئيسية مع روابط المصادقة"""
+    """الصفحة الرئيسية مع زر واحد للمصادقة"""
     html_content = """
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Twitter MCP Authentication</title>
+        <title>ربط حساب Twitter</title>
         <style>
-            body { font-family: Arial, sans-serif; margin: 40px; background: #f5f8fa; }
-            .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            h1 { color: #1da1f2; text-align: center; }
-            .auth-section { margin: 20px 0; padding: 20px; border: 1px solid #e1e8ed; border-radius: 5px; }
-            .oauth-form { display: flex; gap: 10px; margin: 15px 0; }
-            input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-            button { background: #1da1f2; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
-            button:hover { background: #1991db; }
-            .oauth-url { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; word-break: break-all; }
-            .success { color: #28a745; }
-            .error { color: #dc3545; }
-            .manual-section { margin-top: 30px; }
-            .public-oauth { background: #e8f5e8; border-color: #28a745; }
-            .public-oauth h3 { color: #28a745; }
-            .public-btn { background: #28a745; }
-            .public-btn:hover { background: #218838; }
-            .feature-box { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
-            .feature-box h4 { margin-top: 0; color: #495057; }
+            body { 
+                font-family: Arial, sans-serif; 
+                margin: 0; 
+                padding: 0; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .container { 
+                background: white; 
+                padding: 50px; 
+                border-radius: 20px; 
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+                text-align: center;
+                max-width: 500px;
+                width: 90%;
+            }
+            h1 { 
+                color: #1da1f2; 
+                margin-bottom: 30px;
+                font-size: 2.5em;
+            }
+            .description {
+                color: #666;
+                margin-bottom: 40px;
+                font-size: 1.1em;
+                line-height: 1.6;
+            }
+            .connect-btn { 
+                background: linear-gradient(45deg, #1da1f2, #1991db);
+                color: white; 
+                border: none; 
+                padding: 20px 40px; 
+                border-radius: 50px; 
+                font-size: 1.3em;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 10px 20px rgba(29, 161, 242, 0.3);
+                text-decoration: none;
+                display: inline-block;
+            }
+            .connect-btn:hover { 
+                transform: translateY(-3px);
+                box-shadow: 0 15px 30px rgba(29, 161, 242, 0.4);
+            }
+            .connect-btn:active {
+                transform: translateY(-1px);
+            }
+            .icon {
+                font-size: 1.5em;
+                margin-right: 10px;
+            }
+            .footer {
+                margin-top: 40px;
+                color: #999;
+                font-size: 0.9em;
+            }
+            .accounts-section {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+            }
+            .accounts-btn {
+                background: #6c757d;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 25px;
+                cursor: pointer;
+                margin-top: 15px;
+            }
+            .accounts-btn:hover {
+                background: #5a6268;
+            }
+            #accountsList {
+                margin-top: 15px;
+                text-align: right;
+            }
+            .account-item {
+                background: #f8f9fa;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 10px;
+                border-left: 4px solid #1da1f2;
+            }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🐦 Twitter MCP Authentication</h1>
+            <h1>🐦 ربط حساب Twitter</h1>
             
-            <div class="auth-section public-oauth">
-                <h2>🚀 المصادقة السريعة (مُوصى بها)</h2>
-                <p><strong>أسهل طريقة لإضافة حساب Twitter:</strong></p>
-                <p>اضغط على الزر أدناه وسيتم توجيهك مباشرة إلى Twitter للمصادقة. سيتم استخدام username الخاص بك تلقائياً.</p>
-                <a href="/auth/redirect-to-twitter" class="public-btn" style="text-decoration: none; display: inline-block;">🔐 منح الوصول لـ Twitter</a>
-                <button onclick="showPublicLink()" style="background: #6c757d; margin-left: 10px;">🔗 مشاركة الرابط</button>
-                <button onclick="trySimpleOAuth()" style="background: #ffc107; margin-left: 10px;">⚡ تجربة بدون PKCE</button>
-                <div id="publicOAuthResult"></div>
+            <div class="description">
+                اضغط على الزر أدناه لربط حسابك على Twitter مع النظام
+                <br><br>
+                <strong>سيتم توجيهك مباشرة إلى Twitter للموافقة</strong>
             </div>
             
-            <div class="auth-section">
-                <h2>🔐 المصادقة مع username محدد</h2>
-                <p>إذا كنت تريد تحديد username معين:</p>
-                <div class="oauth-form">
-                    <input type="text" id="username" placeholder="أدخل اسم المستخدم المطلوب">
-                    <button onclick="generateOAuthURL()">إنشاء رابط المصادقة</button>
-                </div>
-                <div id="oauthResult"></div>
-            </div>
+            <a href="/auth/redirect-to-twitter" class="connect-btn">
+                <span class="icon">🔗</span>
+                اربط حسابك
+            </a>
             
-            <div class="feature-box">
-                <h4>✨ المزايا الجديدة:</h4>
-                <ul>
-                    <li><strong>زر واحد للمصادقة:</strong> اضغط وتمتع!</li>
-                    <li><strong>username تلقائي:</strong> من Twitter مباشرة</li>
-                    <li><strong>لا حاجة لإدخال بيانات:</strong> كل شيء تلقائي</li>
-                    <li><strong>مشاركة سهلة:</strong> يمكن مشاركة الرابط مع أي شخص</li>
-                </ul>
-            </div>
-            
-            <div class="manual-section">
-                <h2>📝 المصادقة اليدوية</h2>
-                <p>إذا كنت تفضل إدخال المفاتيح يدوياً:</p>
-                <a href="/docs" target="_blank">
-                    <button>فتح واجهة API</button>
-                </a>
-            </div>
-            
-            <div class="auth-section">
-                <h2>📋 الحسابات المخزنة</h2>
-                <button onclick="listAccounts()">عرض الحسابات</button>
+            <div class="accounts-section">
+                <button onclick="listAccounts()" class="accounts-btn">
+                    📋 عرض الحسابات المرتبطة
+                </button>
                 <div id="accountsList"></div>
             </div>
             
-            <div class="feature-box">
-                <h4>🔗 روابط مفيدة:</h4>
-                <p><strong>الرابط العام للمصادقة:</strong> يمكن مشاركته مع أي شخص</p>
-                <p><strong>الرابط المباشر:</strong> <a href="/auth/public-oauth" target="_blank">/auth/public-oauth</a></p>
+            <div class="footer">
+                نظام ربط حسابات Twitter مع MCP Server
             </div>
         </div>
         
         <script>
-            async function trySimpleOAuth() {
+            async function listAccounts() {
                 try {
-                    const response = await fetch('/auth/simple-oauth');
-                    const data = await response.json();
+                    const response = await fetch('/accounts/');
+                    const accounts = await response.json();
                     
-                    if (data.success) {
-                        const resultDiv = document.getElementById('publicOAuthResult');
-                        resultDiv.innerHTML = `
-                            <div class="success">
-                                <p>✅ رابط المصادقة البسيط (بدون PKCE):</p>
-                                <div class="oauth-url">
-                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
-                                </div>
-                                <p><strong>💡 هذا الرابط قد يحل مشكلة redirect_after_login</strong></p>
-                                <button onclick="window.location.href='${data.auth_url}'" style="background: #28a745; margin-top: 10px;">
-                                    🚀 تجربة الآن
-                                </button>
-                                <button onclick="navigator.clipboard.writeText('${data.auth_url}').then(() => alert('تم نسخ الرابط!'))" style="background: #17a2b8; margin-top: 10px; margin-left: 10px;">
-                                    📋 نسخ الرابط
-                                </button>
+                    const accountsDiv = document.getElementById('accountsList');
+                    if (accounts.length === 0) {
+                        accountsDiv.innerHTML = '<p style="color: #666; margin-top: 15px;">لا توجد حسابات مرتبطة</p>';
+                        return;
+                    }
+                    
+                    let html = '<div style="margin-top: 15px;">';
+                    accounts.forEach(account => {
+                        html += `
+                            <div class="account-item">
+                                <strong>@${account.username}</strong><br>
+                                <small>الاسم: ${account.display_name || 'غير محدد'}</small><br>
+                                <small>تاريخ الربط: ${account.created_at || 'غير محدد'}</small><br>
+                                <small>الحالة: ${account.is_active ? '✅ نشط' : '❌ غير نشط'}</small>
                             </div>
                         `;
-                    } else {
-                        document.getElementById('publicOAuthResult').innerHTML = `
-                            <div class="error">❌ ${data.error}</div>
-                        `;
-                    }
+                    });
+                    html += '</div>';
+                    accountsDiv.innerHTML = html;
                 } catch (error) {
-                    document.getElementById('publicOAuthResult').innerHTML = `
-                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
+                    document.getElementById('accountsList').innerHTML = `
+                        <p style="color: #dc3545; margin-top: 15px;">❌ خطأ في جلب الحسابات: ${error.message}</p>
                     `;
                 }
             }
-            
-            async function showPublicLink() {
-                try {
-                    const response = await fetch('/auth/public-oauth');
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        const resultDiv = document.getElementById('publicOAuthResult');
-                        resultDiv.innerHTML = `
-                            <div class="success">
-                                <p>✅ رابط المصادقة العام:</p>
-                                <div class="oauth-url">
-                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
-                                </div>
-                                <p><strong>💡 نصيحة:</strong> يمكنك مشاركة هذا الرابط مع أي شخص!</p>
-                                <button onclick="navigator.clipboard.writeText('${data.auth_url}').then(() => alert('تم نسخ الرابط!'))" style="background: #17a2b8; margin-top: 10px;">
-                                    📋 نسخ الرابط
-                                </button>
-                            </div>
-                        `;
-                    } else {
-                        document.getElementById('publicOAuthResult').innerHTML = `
-                            <div class="error">❌ ${data.error}</div>
-                        `;
-                    }
-                } catch (error) {
-                    document.getElementById('publicOAuthResult').innerHTML = `
-                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
-                    `;
-                }
-            }
-            
-            async function redirectToTwitter() {
-                try {
-                    const response = await fetch('/auth/public-oauth');
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        // التوجيه المباشر إلى Twitter
-                        window.location.href = data.auth_url;
-                    } else {
-                        document.getElementById('publicOAuthResult').innerHTML = `
-                            <div class="error">❌ ${data.error}</div>
-                        `;
-                    }
-                } catch (error) {
-                    document.getElementById('publicOAuthResult').innerHTML = `
-                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
-                    `;
-                }
-            }
-            
-            async function generatePublicOAuth() {
-                try {
-                    const response = await fetch('/auth/public-oauth');
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        const resultDiv = document.getElementById('publicOAuthResult');
-                        resultDiv.innerHTML = `
-                            <div class="success">
-                                <p>✅ تم إنشاء رابط المصادقة العام بنجاح!</p>
-                                <p><strong>الخطوات:</strong></p>
-                                <ol>
-                                    <li>انقر على الزر أدناه</li>
-                                    <li>سجل دخولك إلى Twitter</li>
-                                    <li>أوافق على الصلاحيات</li>
-                                    <li>سيتم إعادة توجيهك تلقائياً</li>
-                                </ol>
-                                <div class="oauth-url">
-                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
-                                </div>
-                                <p><strong>💡 نصيحة:</strong> يمكنك مشاركة هذا الرابط مع أي شخص!</p>
-                                <p><small>⚠️ لا تشارك هذا الرابط مع أي شخص غير موثوق</small></p>
-                            </div>
-                        `;
-                    } else {
-                        document.getElementById('oauthResult').innerHTML = `
-                            <div class="error">❌ ${data.error}</div>
-                        `;
-                    }
-                } catch (error) {
-                    document.getElementById('oauthResult').innerHTML = `
-                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
-                    `;
-                }
-            }
-            
-            async function generateOAuthURL() {
-                const username = document.getElementById('username').value;
-                if (!username) {
-                    alert('يرجى إدخال اسم المستخدم');
-                    return;
-                }
-                
-                try {
-                    const response = await fetch(`/auth/oauth-url?username=${encodeURIComponent(username)}`);
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        const resultDiv = document.getElementById('oauthResult');
-                        resultDiv.innerHTML = `
-                            <div class="success">
-                                <p>✅ تم إنشاء رابط المصادقة بنجاح!</p>
-                                <p><strong>الخطوات:</strong></p>
-                                <ol>
-                                    <li>انقر على الزر أدناه</li>
-                                    <li>سجل دخولك إلى Twitter</li>
-                                    <li>أوافق على الصلاحيات</li>
-                                    <li>سيتم إعادة توجيهك تلقائياً</li>
-                                </ol>
-                                <div class="oauth-url">
-                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
-                                </div>
-                                <p><small>⚠️ لا تشارك هذا الرابط مع أي شخص</small></p>
-                            </div>
-                        `;
-                    } else {
-                        document.getElementById('oauthResult').innerHTML = `
-                            <div class="error">❌ ${data.error}</div>
-                        `;
-                    }
-                } catch (error) {
-                    document.getElementById('oauthResult').innerHTML = `
-                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
-                    `;
-                    }
-                }
-                
-                async function listAccounts() {
-                    try {
-                        const response = await fetch('/accounts/');
-                        const accounts = await response.json();
-                        
-                        const accountsDiv = document.getElementById('accountsList');
-                        if (accounts.length === 0) {
-                            accountsDiv.innerHTML = '<p>لا توجد حسابات مخزنة</p>';
-                            return;
-                        }
-                        
-                        let html = '<div style="margin-top: 15px;">';
-                        accounts.forEach(account => {
-                            html += `
-                                <div style="border: 1px solid #e1e8ed; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                                    <strong>@${account.username}</strong><br>
-                                    <small>الاسم: ${account.display_name || 'غير محدد'}</small><br>
-                                    <small>تاريخ الإنشاء: ${account.created_at || 'غير محدد'}</small><br>
-                                    <small>الحالة: ${account.is_active ? '✅ نشط' : '❌ غير نشط'}</small>
-                                </div>
-                            `;
-                        });
-                        html += '</div>';
-                        accountsDiv.innerHTML = html;
-                    } catch (error) {
-                        document.getElementById('accountsList').innerHTML = `
-                            <div class="error">❌ خطأ في جلب الحسابات: ${error.message}</div>
-                        `;
-                    }
-                }
-            </script>
+        </script>
     </body>
     </html>
     """
@@ -418,17 +298,18 @@ async def redirect_to_twitter():
 # نقطة نهاية Callback
 @auth_app.get("/auth/callback")
 async def oauth_callback(
-    code: str = Query(..., description="رمز المصادقة من Twitter"),
+    oauth_token: str = Query(..., description="رمز OAuth من Twitter"),
+    oauth_verifier: str = Query(..., description="رمز التحقق من Twitter"),
     state: str = Query(None, description="حالة OAuth (اختياري)")
 ):
-    """معالجة callback من Twitter OAuth"""
+    """معالجة callback من Twitter OAuth 1.0a"""
     try:
         if state:
             # استخدام username محدد
-            result = oauth_manager.handle_callback(code, state)
+            result = oauth_manager.handle_callback(oauth_token, oauth_verifier, state)
         else:
             # استخدام الرابط العام
-            result = oauth_manager.handle_public_callback(code)
+            result = oauth_manager.handle_public_callback(oauth_token, oauth_verifier)
         
         if result["success"]:
             # صفحة نجاح
