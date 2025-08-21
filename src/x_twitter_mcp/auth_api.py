@@ -562,7 +562,8 @@ async def get_server_info():
 async def get_n8n_tools():
     """نقطة نهاية خاصة بـ n8n لجلب الأدوات"""
     
-    tools = [
+    # تنسيق متوافق مع n8n
+    return [
         {
             "name": "add_twitter_account",
             "displayName": "إضافة حساب Twitter",
@@ -632,11 +633,6 @@ async def get_n8n_tools():
             }
         }
     ]
-    
-    return {
-        "tools": tools,
-        "count": len(tools)
-    }
 
 # نقطة نهاية سريعة للأدوات (بدون تحقق)
 @auth_app.get("/tools")
