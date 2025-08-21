@@ -557,6 +557,87 @@ async def get_server_info():
         }
     }
 
+# نقطة نهاية خاصة بـ n8n
+@auth_app.get("/n8n/tools")
+async def get_n8n_tools():
+    """نقطة نهاية خاصة بـ n8n لجلب الأدوات"""
+    
+    tools = [
+        {
+            "name": "add_twitter_account",
+            "displayName": "إضافة حساب Twitter",
+            "description": "إضافة حساب Twitter جديد",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "اسم المستخدم",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            }
+        },
+        {
+            "name": "list_twitter_accounts", 
+            "displayName": "عرض الحسابات",
+            "description": "عرض جميع الحسابات المرتبطة",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "test_twitter_account",
+            "displayName": "اختبار الحساب",
+            "description": "اختبار صحة حساب Twitter",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "اسم المستخدم",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            }
+        },
+        {
+            "name": "delete_twitter_account",
+            "displayName": "حذف الحساب",
+            "description": "حذف حساب Twitter",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "اسم المستخدم",
+                        "description": "اسم المستخدم بدون @"
+                    }
+                },
+                "required": ["username"]
+            }
+        },
+        {
+            "name": "get_help",
+            "displayName": "المساعدة",
+            "description": "عرض قائمة الأوامر المتاحة",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    ]
+    
+    return {
+        "tools": tools,
+        "count": len(tools)
+    }
+
 # نقطة نهاية سريعة للأدوات (بدون تحقق)
 @auth_app.get("/tools")
 async def get_tools_fast():
@@ -566,11 +647,12 @@ async def get_tools_fast():
         {
             "name": "add_twitter_account",
             "description": "إضافة حساب Twitter جديد",
-            "parameters": {
+            "inputSchema": {
                 "type": "object",
                 "properties": {
                     "username": {
                         "type": "string",
+                        "title": "اسم المستخدم",
                         "description": "اسم المستخدم بدون @"
                     }
                 },
@@ -581,7 +663,7 @@ async def get_tools_fast():
         {
             "name": "list_twitter_accounts", 
             "description": "عرض جميع الحسابات المرتبطة",
-            "parameters": {
+            "inputSchema": {
                 "type": "object",
                 "properties": {},
                 "required": []
@@ -591,11 +673,12 @@ async def get_tools_fast():
         {
             "name": "test_twitter_account",
             "description": "اختبار صحة حساب Twitter",
-            "parameters": {
+            "inputSchema": {
                 "type": "object",
                 "properties": {
                     "username": {
                         "type": "string",
+                        "title": "اسم المستخدم",
                         "description": "اسم المستخدم بدون @"
                     }
                 },
@@ -606,11 +689,12 @@ async def get_tools_fast():
         {
             "name": "delete_twitter_account",
             "description": "حذف حساب Twitter",
-            "parameters": {
+            "inputSchema": {
                 "type": "object",
                 "properties": {
                     "username": {
-                        "type": "string", 
+                        "type": "string",
+                        "title": "اسم المستخدم",
                         "description": "اسم المستخدم بدون @"
                     }
                 },
@@ -621,7 +705,7 @@ async def get_tools_fast():
         {
             "name": "get_help",
             "description": "عرض قائمة الأوامر المتاحة",
-            "parameters": {
+            "inputSchema": {
                 "type": "object",
                 "properties": {},
                 "required": []
