@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-MCP Proxy Runner - محسن للأداء السريع
+تشغيل بسيط لـ mcp-proxy مع Twitter MCP Server
 """
 
 import subprocess
 import sys
-import os
-import signal
 import time
+import signal
 from pathlib import Path
 
 def signal_handler(signum, frame):
@@ -16,17 +15,19 @@ def signal_handler(signum, frame):
     print("⏳ إيقاف mcp-proxy...")
     sys.exit(0)
 
-def run_mcp_proxy():
-    """تشغيل mcp-proxy مع إعدادات محسنة"""
+def main():
+    """الدالة الرئيسية"""
     
     # إعداد معالج الإشارات
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    print("🚀 بدء تشغيل MCP Proxy...")
-    print("📊 إعدادات محسنة للأداء السريع")
-    print("⚡ تحسين الاستجابة")
-    print("🔧 إصلاح warnings")
+    print("🚀 تشغيل mcp-proxy مع Twitter MCP Server")
+    print("=" * 50)
+    print("📊 إعدادات محسنة للأداء")
+    print("🔧 متوافق مع async/await")
+    print("⚡ استجابة سريعة")
+    print("=" * 50)
     print()
     
     # أوامر mcp-proxy محسنة
@@ -35,9 +36,9 @@ def run_mcp_proxy():
         "--host=0.0.0.0",
         "--port=9000",
         "--allow-origin=*",
-        "--log-level=warning",  # تقليل logging
-        "--timeout=30",         # timeout محسن
-        "--max-connections=100", # زيادة الحد الأقصى للاتصالات
+        "--log-level=warning",
+        "--timeout=30",
+        "--max-connections=100",
         "--",
         "python", "mcp_server_async.py"
     ]
@@ -77,8 +78,11 @@ def run_mcp_proxy():
                 output = process.stdout.readline()
                 if output:
                     # تصفية الرسائل غير الضرورية
-                    if "WARNING" not in output and "Invalid HTTP request" not in output:
-                        print(output.strip())
+                    if any(skip in output for skip in [
+                        "WARNING", "Invalid HTTP request", "DeprecationWarning"
+                    ]):
+                        continue
+                    print(output.strip())
                 
                 # التحقق من حالة العملية
                 if process.poll() is not None:
@@ -109,5 +113,10 @@ if __name__ == "__main__":
         print("💡 قم بتثبيته: pip install mcp-proxy")
         sys.exit(1)
     
+    # التحقق من وجود الملف الجديد
+    if not Path("mcp_server_async.py").exists():
+        print("❌ ملف mcp_server_async.py غير موجود")
+        sys.exit(1)
+    
     # تشغيل mcp-proxy
-    run_mcp_proxy()
+    main()

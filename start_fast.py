@@ -109,7 +109,7 @@ def main():
             "--timeout=30",
             "--max-connections=100",
             "--",
-            "python", "run_server.py"
+            "python", "mcp_server_async.py"
         ]
     )
     
