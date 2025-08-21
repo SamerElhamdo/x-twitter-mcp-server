@@ -446,13 +446,28 @@ async def root(request: Request):
                 resultDiv.innerHTML = '<div class="test-result loading">🔄 جاري الاختبار...</div>';
                 
                 try {
-                    const response = await fetch(`/accounts/${username}/test`);
+                    // استخدام الاختبار السريع أولاً
+                    const response = await fetch(`/accounts/${username}/quick-test`);
                     const result = await response.json();
                     
-                    if (result.credentials_valid) {
-                        resultDiv.innerHTML = '<div class="test-result success">✅ المفاتيح صحيحة - يمكن استخدام الحساب</div>';
+                    if (result.success) {
+                        resultDiv.innerHTML = `
+                            <div class="test-result success">
+                                ✅ الحساب يعمل بشكل صحيح<br>
+                                <small>الاسم: ${result.name || 'غير محدد'}</small><br>
+                                <small>ID: ${result.user_id || 'غير محدد'}</small>
+                            </div>
+                        `;
                     } else {
-                        resultDiv.innerHTML = '<div class="test-result error">❌ المفاتيح غير صحيحة - يرجى تحديثها</div>';
+                        // إذا فشل الاختبار السريع، جرب الاختبار العادي
+                        const testResponse = await fetch(`/accounts/${username}/test`);
+                        const testResult = await testResponse.json();
+                        
+                        if (testResult.is_valid) {
+                            resultDiv.innerHTML = '<div class="test-result success">✅ المفاتيح صحيحة - يمكن استخدام الحساب</div>';
+                        } else {
+                            resultDiv.innerHTML = '<div class="test-result error">❌ المفاتيح غير صحيحة - يرجى تحديثها</div>';
+                        }
                     }
                 } catch (error) {
                     resultDiv.innerHTML = '<div class="test-result error">❌ خطأ في الاختبار: ' + error.message + '</div>';
@@ -981,7 +996,7 @@ async def deactivate_account(username: str):
         raise HTTPException(status_code=500, detail=f"خطأ في الخادم: {str(e)}")
 
 # نقطة نهاية لاختبار مفاتيح المصادقة
-@auth_app.post("/accounts/{username}/test", response_model=TestCredentialsResponse)
+@auth_app.get("/accounts/{username}/test", response_model=TestCredentialsResponse)
 async def test_account_credentials(username: str):
     """اختبار صحة مفاتيح المصادقة لحساب Twitter"""
     try:
@@ -1028,7 +1043,7 @@ async def get_server_info():
             "update_account": "PUT /accounts/{username}",
             "delete_account": "DELETE /accounts/{username}",
             "deactivate_account": "PATCH /accounts/{username}/deactivate",
-            "test_credentials": "POST /accounts/{username}/test",
+            "test_credentials": "GET /accounts/{username}/test",
             "api_docs": "GET /docs"
         }
     }
@@ -1454,6 +1469,52 @@ async def get_tools_fast():
         "description": "Twitter MCP Server Tools for AI Agent"
     }
 
+# نقطة نهاية لاختبار الحساب (اختبار سريع)
+@auth_app.get("/accounts/{username}/quick-test")
+async def quick_test_account(username: str):
+    """اختبار سريع للحساب"""
+    try:
+        # استيراد MCP server
+        from .server import initialize_twitter_clients
+        
+        try:
+            # تهيئة عملاء Twitter
+            client, v1_api = initialize_twitter_clients(username)
+            
+            # محاولة الحصول على معلومات المستخدم
+            me = client.get_me()
+            
+            if me.data:
+                return {
+                    "success": True,
+                    "message": "الحساب يعمل بشكل صحيح",
+                    "username": username,
+                    "user_id": me.data.id,
+                    "name": me.data.name,
+                    "verified": getattr(me.data, 'verified', False)
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "فشل في الحصول على معلومات الحساب",
+                    "username": username
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"فشل في اختبار الحساب: {str(e)}",
+                "error": str(e),
+                "username": username
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"خطأ في معالجة الطلب: {str(e)}",
+            "error": str(e)
+        }
+
 # نقطة نهاية MCP للتغريد
 @auth_app.post("/mcp/post_tweet")
 async def mcp_post_tweet(request: Request):
@@ -1480,10 +1541,16 @@ async def mcp_post_tweet(request: Request):
             tweet_data = {"text": text}
             tweet = client.create_tweet(**tweet_data)
             
+            # التحقق من وجود البيانات
+            if hasattr(tweet, 'data') and tweet.data:
+                tweet_id = tweet.data.get("id", "غير محدد")
+            else:
+                tweet_id = "غير محدد"
+            
             return {
                 "success": True,
                 "message": "تم نشر التغريدة بنجاح",
-                "id": tweet.data["id"],
+                "id": tweet_id,
                 "text": text,
                 "username": username
             }
