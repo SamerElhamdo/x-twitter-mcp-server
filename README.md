@@ -10,8 +10,8 @@
 # Terminal 1: تشغيل الخادم الأساسي
 python run_server.py
 
-# Terminal 2: تشغيل mcp-proxy
-mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python run_server.py
+# Terminal 2: تشغيل mcp-proxy مع الخادم المحدث
+mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python mcp_server_async.py
 ```
 
 ### الطريقة 2: تشغيل بسيط
@@ -19,6 +19,9 @@ mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python run_server.py
 ```bash
 # تشغيل الخادم الأساسي
 python start_server.py
+
+# تشغيل mcp-proxy مع الخادم المحدث
+python start_proxy.py
 ```
 
 ## 🌐 نقاط النهاية
