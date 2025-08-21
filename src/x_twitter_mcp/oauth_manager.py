@@ -39,26 +39,36 @@ class TwitterOAuthManager:
         state = secrets.token_urlsafe(32)
         return state
     
+    def get_simple_oauth_url(self) -> str:
+        """إنشاء رابط OAuth بسيط بدون PKCE (لحل مشكلة redirect_after_login)
+        
+        Returns:
+            str: رابط المصادقة البسيط
+        """
+        if not self.client_id:
+            raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
+        
+        # معاملات المصادقة البسيطة (بدون PKCE)
+        params = {
+            "response_type": "code",
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
+            "scope": "tweet.read tweet.write users.read follows.read offline.access",
+            "force_login": "false"
+        }
+        
+        # إنشاء رابط المصادقة البسيط
+        auth_url = f"{self.authorization_url}?{urlencode(params)}"
+        return auth_url
+    
     def get_public_oauth_url(self) -> str:
         """إنشاء رابط OAuth عام للجميع
         
         Returns:
             str: رابط المصادقة العام
         """
-        if not self.client_id:
-            raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
-        
-        # معاملات المصادقة العامة (بدون PKCE)
-        params = {
-            "response_type": "code",
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
-            "scope": "tweet.read tweet.write users.read follows.read offline.access"
-        }
-        
-        # إنشاء رابط المصادقة العام
-        auth_url = f"{self.authorization_url}?{urlencode(params)}"
-        return auth_url
+        # استخدام الرابط البسيط لحل مشكلة redirect_after_login
+        return self.get_simple_oauth_url()
     
     def get_authorization_url(self, username: str) -> Tuple[str, str]:
         """إنشاء رابط المصادقة لـ Twitter مع username محدد
@@ -84,13 +94,17 @@ class TwitterOAuthManager:
             "timestamp": int(os.time())
         }
         
-        # معاملات المصادقة (بدون PKCE)
+        # معاملات المصادقة مع OAuth 2.0 الصحيح
         params = {
             "response_type": "code",
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
             "scope": "tweet.read tweet.write users.read follows.read offline.access",
-            "state": state
+            "state": state,
+            "code_challenge_method": "S256",
+            "code_challenge": self._generate_code_challenge(),
+            "force_login": "false",
+            "lang": "en"
         }
         
         # إنشاء رابط المصادقة

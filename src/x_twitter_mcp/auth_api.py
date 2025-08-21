@@ -96,6 +96,7 @@ async def root(request: Request):
                 <p>اضغط على الزر أدناه وسيتم توجيهك مباشرة إلى Twitter للمصادقة. سيتم استخدام username الخاص بك تلقائياً.</p>
                 <a href="/auth/redirect-to-twitter" class="public-btn" style="text-decoration: none; display: inline-block;">🔐 منح الوصول لـ Twitter</a>
                 <button onclick="showPublicLink()" style="background: #6c757d; margin-left: 10px;">🔗 مشاركة الرابط</button>
+                <button onclick="trySimpleOAuth()" style="background: #ffc107; margin-left: 10px;">⚡ تجربة بدون PKCE</button>
                 <div id="publicOAuthResult"></div>
             </div>
             
@@ -141,6 +142,40 @@ async def root(request: Request):
         </div>
         
         <script>
+            async function trySimpleOAuth() {
+                try {
+                    const response = await fetch('/auth/simple-oauth');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const resultDiv = document.getElementById('publicOAuthResult');
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                <p>✅ رابط المصادقة البسيط (بدون PKCE):</p>
+                                <div class="oauth-url">
+                                    <a href="${data.auth_url}" target="_blank">${data.auth_url}</a>
+                                </div>
+                                <p><strong>💡 هذا الرابط قد يحل مشكلة redirect_after_login</strong></p>
+                                <button onclick="window.location.href='${data.auth_url}'" style="background: #28a745; margin-top: 10px;">
+                                    🚀 تجربة الآن
+                                </button>
+                                <button onclick="navigator.clipboard.writeText('${data.auth_url}').then(() => alert('تم نسخ الرابط!'))" style="background: #17a2b8; margin-top: 10px; margin-left: 10px;">
+                                    📋 نسخ الرابط
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('publicOAuthResult').innerHTML = `
+                            <div class="error">❌ ${data.error}</div>
+                        `;
+                    }
+                } catch (error) {
+                    document.getElementById('publicOAuthResult').innerHTML = `
+                        <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
+                    `;
+                }
+            }
+            
             async function showPublicLink() {
                 try {
                     const response = await fetch('/auth/public-oauth');
@@ -217,12 +252,12 @@ async def root(request: Request):
                             </div>
                         `;
                     } else {
-                        document.getElementById('publicOAuthResult').innerHTML = `
+                        document.getElementById('oauthResult').innerHTML = `
                             <div class="error">❌ ${data.error}</div>
                         `;
                     }
                 } catch (error) {
-                    document.getElementById('publicOAuthResult').innerHTML = `
+                    document.getElementById('oauthResult').innerHTML = `
                         <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
                     `;
                 }
@@ -266,40 +301,40 @@ async def root(request: Request):
                     document.getElementById('oauthResult').innerHTML = `
                         <div class="error">❌ خطأ في الاتصال: ${error.message}</div>
                     `;
-                }
-            }
-            
-            async function listAccounts() {
-                try {
-                    const response = await fetch('/accounts/');
-                    const accounts = await response.json();
-                    
-                    const accountsDiv = document.getElementById('accountsList');
-                    if (accounts.length === 0) {
-                        accountsDiv.innerHTML = '<p>لا توجد حسابات مخزنة</p>';
-                        return;
                     }
-                    
-                    let html = '<div style="margin-top: 15px;">';
-                    accounts.forEach(account => {
-                        html += `
-                            <div style="border: 1px solid #e1e8ed; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                                <strong>@${account.username}</strong><br>
-                                <small>الاسم: ${account.display_name || 'غير محدد'}</small><br>
-                                <small>تاريخ الإنشاء: ${account.created_at || 'غير محدد'}</small><br>
-                                <small>الحالة: ${account.is_active ? '✅ نشط' : '❌ غير نشط'}</small>
-                            </div>
-                        `;
-                    });
-                    html += '</div>';
-                    accountsDiv.innerHTML = html;
-                } catch (error) {
-                    document.getElementById('accountsList').innerHTML = `
-                        <div class="error">❌ خطأ في جلب الحسابات: ${error.message}</div>
-                    `;
                 }
-            }
-        </script>
+                
+                async function listAccounts() {
+                    try {
+                        const response = await fetch('/accounts/');
+                        const accounts = await response.json();
+                        
+                        const accountsDiv = document.getElementById('accountsList');
+                        if (accounts.length === 0) {
+                            accountsDiv.innerHTML = '<p>لا توجد حسابات مخزنة</p>';
+                            return;
+                        }
+                        
+                        let html = '<div style="margin-top: 15px;">';
+                        accounts.forEach(account => {
+                            html += `
+                                <div style="border: 1px solid #e1e8ed; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                                    <strong>@${account.username}</strong><br>
+                                    <small>الاسم: ${account.display_name || 'غير محدد'}</small><br>
+                                    <small>تاريخ الإنشاء: ${account.created_at || 'غير محدد'}</small><br>
+                                    <small>الحالة: ${account.is_active ? '✅ نشط' : '❌ غير نشط'}</small>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        accountsDiv.innerHTML = html;
+                    } catch (error) {
+                        document.getElementById('accountsList').innerHTML = `
+                            <div class="error">❌ خطأ في جلب الحسابات: ${error.message}</div>
+                        `;
+                    }
+                }
+            </script>
     </body>
     </html>
     """
@@ -333,6 +368,23 @@ async def get_public_oauth():
             "success": True,
             "auth_url": auth_url,
             "message": "رابط المصادقة العام جاهز"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+# نقطة نهاية OAuth البسيط (بدون PKCE)
+@auth_app.get("/auth/simple-oauth")
+async def get_simple_oauth():
+    """إنشاء رابط مصادقة OAuth بسيط بدون PKCE"""
+    try:
+        auth_url = oauth_manager.get_simple_oauth_url()
+        return {
+            "success": True,
+            "auth_url": auth_url,
+            "message": "رابط المصادقة البسيط جاهز"
         }
     except Exception as e:
         return {
