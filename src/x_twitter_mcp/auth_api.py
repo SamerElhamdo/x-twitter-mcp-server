@@ -634,6 +634,85 @@ async def get_n8n_tools():
         }
     ]
 
+# نقطة نهاية بديلة لـ n8n
+@auth_app.get("/n8n/tools-alt")
+async def get_n8n_tools_alt():
+    """نقطة نهاية بديلة لـ n8n"""
+    
+    return {
+        "status": "success",
+        "data": [
+            {
+                "name": "add_twitter_account",
+                "displayName": "إضافة حساب Twitter",
+                "description": "إضافة حساب Twitter جديد",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "title": "اسم المستخدم",
+                            "description": "اسم المستخدم بدون @"
+                        }
+                    },
+                    "required": ["username"]
+                }
+            },
+            {
+                "name": "list_twitter_accounts", 
+                "displayName": "عرض الحسابات",
+                "description": "عرض جميع الحسابات المرتبطة",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            },
+            {
+                "name": "test_twitter_account",
+                "displayName": "اختبار الحساب",
+                "description": "اختبار صحة حساب Twitter",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "title": "اسم المستخدم",
+                            "description": "اسم المستخدم بدون @"
+                        }
+                    },
+                    "required": ["username"]
+                }
+            },
+            {
+                "name": "delete_twitter_account",
+                "displayName": "حذف الحساب",
+                "description": "حذف حساب Twitter",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "title": "اسم المستخدم",
+                            "description": "اسم المستخدم بدون @"
+                        }
+                    },
+                    "required": ["username"]
+                }
+            },
+            {
+                "name": "get_help",
+                "displayName": "المساعدة",
+                "description": "عرض قائمة الأوامر المتاحة",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        ]
+    }
+
 # نقطة نهاية سريعة للأدوات (بدون تحقق)
 @auth_app.get("/tools")
 async def get_tools_fast():
