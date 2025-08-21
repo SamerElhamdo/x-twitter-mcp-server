@@ -131,27 +131,203 @@ async def root(request: Request):
                 border-top: 1px solid #eee;
             }
             .accounts-btn {
+                background: linear-gradient(45deg, #6c757d, #5a6268);
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 25px;
+                cursor: pointer;
+                margin-top: 15px;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+            }
+            .accounts-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(108, 117, 125, 0.4);
+            }
+            #accountsList {
+                margin-top: 20px;
+                text-align: right;
+            }
+            .account-item {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                padding: 20px;
+                margin: 15px 0;
+                border-radius: 15px;
+                border-left: 5px solid #1da1f2;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+                transition: all 0.3s ease;
+            }
+            .account-item:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            }
+            .account-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 15px;
+            }
+            .account-info {
+                flex: 1;
+            }
+            .account-actions {
+                display: flex;
+                gap: 10px;
+                flex-shrink: 0;
+            }
+            .action-btn {
+                border: none;
+                padding: 8px 16px;
+                border-radius: 20px;
+                cursor: pointer;
+                font-size: 0.9em;
+                font-weight: bold;
+                transition: all 0.2s ease;
+                min-width: 80px;
+            }
+            .test-btn {
+                background: linear-gradient(45deg, #17a2b8, #138496);
+                color: white;
+            }
+            .tweet-btn {
+                background: linear-gradient(45deg, #1da1f2, #1991db);
+                color: white;
+            }
+            .delete-btn {
+                background: linear-gradient(45deg, #dc3545, #c82333);
+                color: white;
+            }
+            .action-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            }
+            .test-result {
+                margin-top: 15px;
+                padding: 10px;
+                border-radius: 8px;
+                font-weight: bold;
+            }
+            .loading {
+                background: #fff3cd;
+                color: #856404;
+                border: 1px solid #ffeaa7;
+            }
+            .success {
+                background: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+            .error {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+            .tweet-form {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border: 2px solid #1da1f2;
+                border-radius: 15px;
+                padding: 20px;
+                margin-top: 15px;
+                box-shadow: 0 5px 15px rgba(29, 161, 242, 0.2);
+            }
+            .tweet-input {
+                width: 100%;
+                min-height: 100px;
+                padding: 15px;
+                border: 2px solid #dee2e6;
+                border-radius: 10px;
+                font-size: 1em;
+                font-family: inherit;
+                resize: vertical;
+                margin-bottom: 15px;
+                transition: border-color 0.3s ease;
+            }
+            .tweet-input:focus {
+                outline: none;
+                border-color: #1da1f2;
+                box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
+            }
+            .tweet-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .tweet-submit {
+                background: linear-gradient(45deg, #28a745, #20c997);
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 25px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 1em;
+                transition: all 0.3s ease;
+            }
+            .tweet-submit:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            }
+            .tweet-submit:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+            .tweet-cancel {
                 background: #6c757d;
                 color: white;
                 border: none;
                 padding: 10px 20px;
-                border-radius: 25px;
+                border-radius: 20px;
                 cursor: pointer;
-                margin-top: 15px;
+                font-size: 0.9em;
+                transition: all 0.3s ease;
             }
-            .accounts-btn:hover {
+            .tweet-cancel:hover {
                 background: #5a6268;
+                transform: translateY(-1px);
             }
-            #accountsList {
-                margin-top: 15px;
-                text-align: right;
+            .char-count {
+                color: #6c757d;
+                font-size: 0.9em;
+                font-weight: bold;
             }
-            .account-item {
-                background: #f8f9fa;
-                padding: 15px;
-                margin: 10px 0;
-                border-radius: 10px;
-                border-left: 4px solid #1da1f2;
+            .char-count.warning {
+                color: #ffc107;
+            }
+            .char-count.danger {
+                color: #dc3545;
+            }
+            .empty-state {
+                text-align: center;
+                padding: 40px 20px;
+                color: #6c757d;
+                font-style: italic;
+            }
+            .stats {
+                display: flex;
+                justify-content: space-around;
+                margin: 20px 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 15px;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            }
+            .stat-item {
+                text-align: center;
+            }
+            .stat-number {
+                font-size: 2em;
+                font-weight: bold;
+                color: #1da1f2;
+            }
+            .stat-label {
+                color: #6c757d;
+                font-size: 0.9em;
+                margin-top: 5px;
             }
         </style>
     </head>
@@ -171,9 +347,14 @@ async def root(request: Request):
             </a>
             
             <div class="accounts-section">
-                <button onclick="listAccounts()" class="accounts-btn">
-                    📋 عرض الحسابات المرتبطة
-                </button>
+                <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 20px;">
+                    <button onclick="listAccounts()" class="accounts-btn">
+                        📋 عرض الحسابات المرتبطة
+                    </button>
+                    <button onclick="refreshAccounts()" class="accounts-btn" style="background: linear-gradient(45deg, #28a745, #20c997);">
+                        🔄 تحديث القائمة
+                    </button>
+                </div>
                 <div id="accountsList"></div>
             </div>
             
@@ -190,22 +371,68 @@ async def root(request: Request):
                     
                     const accountsDiv = document.getElementById('accountsList');
                     if (accounts.length === 0) {
-                        accountsDiv.innerHTML = '<p style="color: #666; margin-top: 15px;">لا توجد حسابات مرتبطة</p>';
+                        accountsDiv.innerHTML = `
+                            <div class="empty-state">
+                                <div style="font-size: 4em; margin-bottom: 20px;">🐦</div>
+                                <h3 style="color: #6c757d; margin-bottom: 10px;">لا توجد حسابات مرتبطة</h3>
+                                <p style="color: #999;">اضغط على "اربط حسابك" أعلاه لإضافة أول حساب Twitter</p>
+                            </div>
+                        `;
                         return;
                     }
                     
-                    let html = '<div style="margin-top: 15px;">';
+                    // إضافة إحصائيات
+                    const activeAccounts = accounts.filter(acc => acc.is_active).length;
+                    const totalAccounts = accounts.length;
+                    
+                    let html = `
+                        <div class="stats">
+                            <div class="stat-item">
+                                <div class="stat-number">${totalAccounts}</div>
+                                <div class="stat-label">إجمالي الحسابات</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${activeAccounts}</div>
+                                <div class="stat-label">الحسابات النشطة</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${totalAccounts - activeAccounts}</div>
+                                <div class="stat-label">الحسابات غير النشطة</div>
+                            </div>
+                        </div>
+                    `;
+                    
                     accounts.forEach(account => {
+                        const statusIcon = account.is_active ? '✅' : '❌';
+                        const statusText = account.is_active ? 'نشط' : 'غير نشط';
+                        const statusColor = account.is_active ? '#28a745' : '#dc3545';
+                        
                         html += `
-                            <div class="account-item">
-                                <strong>@${account.username}</strong><br>
-                                <small>الاسم: ${account.display_name || 'غير محدد'}</small><br>
-                                <small>تاريخ الربط: ${account.created_at || 'غير محدد'}</small><br>
-                                <small>الحالة: ${account.is_active ? '✅ نشط' : '❌ غير نشط'}</small>
+                            <div class="account-item" id="account-${account.username}">
+                                <div class="account-header">
+                                    <div class="account-info">
+                                        <strong style="font-size: 1.2em; color: #1da1f2;">@${account.username}</strong><br>
+                                        <small>الاسم: ${account.display_name || 'غير محدد'}</small><br>
+                                        <small>تاريخ الربط: ${account.created_at || 'غير محدد'}</small><br>
+                                        <small style="color: ${statusColor};">الحالة: ${statusIcon} ${statusText}</small>
+                                    </div>
+                                    <div class="account-actions">
+                                        <button onclick="testAccount('${account.username}')" class="action-btn test-btn">
+                                            🧪 اختبار
+                                        </button>
+                                        <button onclick="showTweetForm('${account.username}')" class="action-btn tweet-btn">
+                                            🐦 تغريد
+                                        </button>
+                                        <button onclick="deleteAccount('${account.username}')" class="action-btn delete-btn">
+                                            🗑️ حذف
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="test-result-${account.username}" class="test-result"></div>
                             </div>
                         `;
                     });
-                    html += '</div>';
+                    
                     accountsDiv.innerHTML = html;
                 } catch (error) {
                     document.getElementById('accountsList').innerHTML = `
@@ -213,6 +440,260 @@ async def root(request: Request):
                     `;
                 }
             }
+            
+            async function testAccount(username) {
+                const resultDiv = document.getElementById(`test-result-${username}`);
+                resultDiv.innerHTML = '<div class="test-result loading">🔄 جاري الاختبار...</div>';
+                
+                try {
+                    const response = await fetch(`/accounts/${username}/test`);
+                    const result = await response.json();
+                    
+                    if (result.credentials_valid) {
+                        resultDiv.innerHTML = '<div class="test-result success">✅ المفاتيح صحيحة - يمكن استخدام الحساب</div>';
+                    } else {
+                        resultDiv.innerHTML = '<div class="test-result error">❌ المفاتيح غير صحيحة - يرجى تحديثها</div>';
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = '<div class="test-result error">❌ خطأ في الاختبار: ' + error.message + '</div>';
+                }
+            }
+            
+            async function deleteAccount(username) {
+                const confirmMessage = `هل أنت متأكد من حذف الحساب @${username}؟\n\n⚠️ تحذير: هذا الإجراء لا يمكن التراجع عنه!`;
+                
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/accounts/${username}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        // إزالة العنصر من الصفحة
+                        const accountElement = document.getElementById(`account-${username}`);
+                        accountElement.style.animation = 'fadeOut 0.5s ease-out';
+                        
+                        // عرض رسالة نجاح
+                        const successMessage = document.createElement('div');
+                        successMessage.innerHTML = '<div class="test-result success">✅ تم حذف الحساب @' + username + ' بنجاح</div>';
+                        successMessage.style.marginTop = '10px';
+                        accountElement.appendChild(successMessage);
+                        
+                        setTimeout(() => {
+                            accountElement.remove();
+                            // إعادة عرض الحسابات المتبقية
+                            listAccounts();
+                        }, 1500);
+                    } else {
+                        const errorData = await response.json();
+                        alert('❌ فشل في حذف الحساب: ' + (errorData.message || 'خطأ غير معروف'));
+                    }
+                } catch (error) {
+                    alert('❌ خطأ في حذف الحساب: ' + error.message);
+                }
+            }
+            
+            // إضافة تأثيرات بصرية
+            function addVisualEffects() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes fadeOut {
+                        from { opacity: 1; transform: translateX(0); }
+                        to { opacity: 0; transform: translateX(-20px); }
+                    }
+                    
+                    .account-item {
+                        transition: all 0.3s ease;
+                    }
+                    
+                    .account-item:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                    }
+                    
+                    button {
+                        transition: all 0.2s ease;
+                    }
+                    
+                    button:hover {
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    }
+                    
+                    button:active {
+                        transform: translateY(0);
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // دالة عرض نموذج التغريد
+            function showTweetForm(username) {
+                // إزالة أي نماذج مفتوحة أخرى
+                const existingForms = document.querySelectorAll('.tweet-form');
+                existingForms.forEach(form => form.remove());
+                
+                const accountElement = document.getElementById(`account-${username}`);
+                const tweetForm = document.createElement('div');
+                tweetForm.className = 'tweet-form';
+                tweetForm.innerHTML = `
+                    <h4 style="margin: 0 0 15px 0; color: #1da1f2;">🐦 تغريد تجريبي من @${username}</h4>
+                    <textarea 
+                        class="tweet-input" 
+                        placeholder="اكتب نص التغريدة هنا... (الحد الأقصى 280 حرف)"
+                        maxlength="280"
+                        oninput="updateCharCount(this, ${280 - this.value.length})"
+                    ></textarea>
+                    <div class="tweet-actions">
+                        <div class="char-count" id="char-count-${username}">280 حرف متبقي</div>
+                        <div>
+                            <button onclick="cancelTweet('${username}')" class="tweet-cancel">❌ إلغاء</button>
+                            <button onclick="submitTweet('${username}')" class="tweet-submit">🚀 نشر التغريدة</button>
+                        </div>
+                    </div>
+                `;
+                
+                // إدراج النموذج بعد معلومات الحساب
+                const accountInfo = accountElement.querySelector('.account-info');
+                accountInfo.parentNode.insertBefore(tweetForm, accountInfo.nextSibling);
+                
+                // التركيز على حقل النص
+                setTimeout(() => {
+                    const textarea = tweetForm.querySelector('.tweet-input');
+                    textarea.focus();
+                }, 100);
+            }
+            
+            // دالة تحديث عداد الأحرف
+            function updateCharCount(textarea, remainingChars) {
+                const username = textarea.closest('.account-item').id.replace('account-', '');
+                const charCount = document.getElementById(`char-count-${username}`);
+                
+                charCount.textContent = `${remainingChars} حرف متبقي`;
+                charCount.className = 'char-count';
+                
+                if (remainingChars <= 20) {
+                    charCount.classList.add('warning');
+                }
+                if (remainingChars <= 10) {
+                    charCount.classList.add('danger');
+                }
+            }
+            
+            // دالة إلغاء التغريد
+            function cancelTweet(username) {
+                const tweetForm = document.querySelector(`#account-${username} .tweet-form`);
+                if (tweetForm) {
+                    tweetForm.remove();
+                }
+            }
+            
+            // دالة إرسال التغريدة
+            async function submitTweet(username) {
+                const tweetForm = document.querySelector(`#account-${username} .tweet-form`);
+                const textarea = tweetForm.querySelector('.tweet-input');
+                const submitBtn = tweetForm.querySelector('.tweet-submit');
+                const tweetText = textarea.value.trim();
+                
+                if (!tweetText) {
+                    alert('⚠️ يرجى كتابة نص التغريدة');
+                    textarea.focus();
+                    return;
+                }
+                
+                if (tweetText.length > 280) {
+                    alert('⚠️ نص التغريدة طويل جداً (الحد الأقصى 280 حرف)');
+                    return;
+                }
+                
+                // تعطيل الزر وإظهار حالة التحميل
+                submitBtn.disabled = true;
+                submitBtn.textContent = '🔄 جاري النشر...';
+                
+                try {
+                    // استخدام MCP tool لإنشاء التغريدة
+                    const response = await fetch('/mcp/post_tweet', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: tweetText,
+                            username: username
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        // إظهار رسالة نجاح
+                        const successMessage = document.createElement('div');
+                        successMessage.innerHTML = `
+                            <div class="test-result success">
+                                ✅ تم نشر التغريدة بنجاح!<br>
+                                <small>ID: ${result.id || 'غير محدد'}</small>
+                            </div>
+                        `;
+                        successMessage.style.marginTop = '15px';
+                        
+                        // إزالة النموذج وإظهار رسالة النجاح
+                        tweetForm.remove();
+                        const accountElement = document.getElementById(`account-${username}`);
+                        accountElement.appendChild(successMessage);
+                        
+                        // إزالة رسالة النجاح بعد 5 ثواني
+                        setTimeout(() => {
+                            successMessage.remove();
+                        }, 5000);
+                        
+                    } else {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'خطأ في نشر التغريدة');
+                    }
+                    
+                } catch (error) {
+                    // إظهار رسالة خطأ
+                    const errorMessage = document.createElement('div');
+                    errorMessage.innerHTML = `
+                        <div class="test-result error">
+                            ❌ فشل في نشر التغريدة: ${error.message}
+                        </div>
+                    `;
+                    errorMessage.style.marginTop = '15px';
+                    
+                    // إزالة النموذج وإظهار رسالة الخطأ
+                    tweetForm.remove();
+                    const accountElement = document.getElementById(`account-${username}`);
+                    accountElement.appendChild(errorMessage);
+                    
+                    // إزالة رسالة الخطأ بعد 8 ثواني
+                    setTimeout(() => {
+                        errorMessage.remove();
+                    }, 8000);
+                    
+                } finally {
+                    // إعادة تفعيل الزر
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚀 نشر التغريدة';
+                }
+            }
+            
+            // دالة تحديث الحسابات
+            async function refreshAccounts() {
+                const accountsDiv = document.getElementById('accountsList');
+                accountsDiv.innerHTML = '<div class="empty-state"><div style="font-size: 2em;">🔄</div><p>جاري تحديث القائمة...</p></div>';
+                
+                // انتظار قليل ثم إعادة عرض الحسابات
+                setTimeout(() => {
+                    listAccounts();
+                }, 1000);
+            }
+            
+            // تشغيل التأثيرات عند تحميل الصفحة
+            window.addEventListener('load', addVisualEffects);
         </script>
     </body>
     </html>
@@ -972,6 +1453,50 @@ async def get_tools_fast():
         "version": "1.0.0",
         "description": "Twitter MCP Server Tools for AI Agent"
     }
+
+# نقطة نهاية MCP للتغريد
+@auth_app.post("/mcp/post_tweet")
+async def mcp_post_tweet(request: Request):
+    """نقطة نهاية MCP لإنشاء تغريدة"""
+    try:
+        body = await request.json()
+        text = body.get("text", "")
+        username = body.get("username", "")
+        
+        if not text or not username:
+            raise HTTPException(status_code=400, detail="النص واسم المستخدم مطلوبان")
+        
+        if len(text) > 280:
+            raise HTTPException(status_code=400, detail="نص التغريدة طويل جداً (الحد الأقصى 280 حرف)")
+        
+        # استيراد MCP server
+        from .server import initialize_twitter_clients
+        
+        try:
+            # تهيئة عملاء Twitter
+            client, v1_api = initialize_twitter_clients(username)
+            
+            # إنشاء التغريدة
+            tweet_data = {"text": text}
+            tweet = client.create_tweet(**tweet_data)
+            
+            return {
+                "success": True,
+                "message": "تم نشر التغريدة بنجاح",
+                "id": tweet.data["id"],
+                "text": text,
+                "username": username
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"فشل في نشر التغريدة: {str(e)}",
+                "error": str(e)
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطأ في معالجة الطلب: {str(e)}")
 
 def start_auth_server(host: str = "127.0.0.1", port: int = 8000):
     """بدء تشغيل خادم المصادقة"""
