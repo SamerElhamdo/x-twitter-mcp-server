@@ -489,6 +489,34 @@ async def delete_all_bookmarks(username: str) -> Dict:
         client.remove_bookmark(tweet_id=bookmark["id"])
     return {"status": "all bookmarks deleted"}
 
+@server.tool(name="retweet", description="Retweet a tweet")
+async def retweet(tweet_id: str, username: str) -> Dict:
+    """Retweets a tweet.
+
+    Args:
+        tweet_id (str): The ID of the tweet to retweet.
+        username (str): Your Twitter username (stored in database)
+    """
+    if not check_rate_limit("tweet_actions"):
+        raise Exception("Tweet action rate limit exceeded")
+    client, _ = initialize_twitter_clients(username)
+    result = client.retweet(tweet_id=tweet_id)
+    return {"tweet_id": tweet_id, "retweeted": result.data["retweeted"]}
+
+@server.tool(name="unretweet", description="Unretweet a tweet")
+async def unretweet(tweet_id: str, username: str) -> Dict:
+    """Unretweets a tweet.
+
+    Args:
+        tweet_id (str): The ID of the tweet to unretweet.
+        username (str): Your Twitter username (stored in database)
+    """
+    if not check_rate_limit("tweet_actions"):
+        raise Exception("Tweet action rate limit exceeded")
+    client, _ = initialize_twitter_clients(username)
+    result = client.unretweet(tweet_id=tweet_id)
+    return {"tweet_id": tweet_id, "retweeted": not result.data["retweeted"]}
+
 # Timeline & Search Tools
 @server.tool(name="get_timeline", description="Get tweets from your home timeline (For You)")
 async def get_timeline(
