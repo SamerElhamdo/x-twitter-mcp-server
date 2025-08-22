@@ -46,6 +46,16 @@ def main():
     if args.debug:
         settings.debug = True
     
+    # التأكد من أن القيم صحيحة
+    if not settings.host:
+        settings.host = "127.0.0.1"
+    if not settings.port:
+        settings.port = 8000
+    if not hasattr(settings, 'debug') or settings.debug is None:
+        settings.debug = True
+    if not hasattr(settings, 'environment') or not settings.environment:
+        settings.environment = "development"
+    
     # إنشاء قاعدة البيانات
     print("🗄️  إنشاء قاعدة البيانات...")
     try:
@@ -81,12 +91,19 @@ def main():
     
     # تشغيل الخادم
     try:
+        # الحصول على مستوى التسجيل
+        log_level = "DEBUG"  # افتراضي
+        try:
+            log_level = settings.get_log_level()
+        except:
+            log_level = "DEBUG"
+        
         uvicorn.run(
             auth_app,
             host=settings.host,
             port=settings.port,
             reload=args.reload or settings.debug,
-            log_level=settings.get_log_level(),
+            log_level=log_level,
             access_log=True
         )
     except KeyboardInterrupt:

@@ -71,7 +71,13 @@ class Settings(BaseSettings):
     
     def get_log_level(self) -> str:
         """الحصول على مستوى التسجيل"""
-        return "INFO" if self.is_production() else "DEBUG"
+        try:
+            if hasattr(self, 'environment') and self.environment:
+                return "INFO" if self.environment.lower() == "production" else "DEBUG"
+            else:
+                return "DEBUG"
+        except:
+            return "DEBUG"
 
 # إنشاء كائن الإعدادات العام
 _settings = None
