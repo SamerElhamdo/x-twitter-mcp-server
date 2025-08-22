@@ -88,11 +88,12 @@ class TwitterOAuthManager:
                 "oauth2_handler": oauth2_handler
             }
             
-            # معلومات تشخيصية
-            print(f"💾 تم حفظ state: {state}")
-            print(f"👤 للمستخدم: default_user")
-            print(f"📊 إجمالي الحالات: {len(self.oauth_states)}")
-            print(f"🔑 الحالات المتاحة: {list(self.oauth_states.keys())}")
+            # معلومات تشخيصية مفصلة
+            print(f"💾 [get_simple_oauth_url] تم حفظ state: {state}")
+            print(f"👤 [get_simple_oauth_url] للمستخدم: default_user")
+            print(f"📊 [get_simple_oauth_url] إجمالي الحالات: {len(self.oauth_states)}")
+            print(f"🔑 [get_simple_oauth_url] الحالات المتاحة: {list(self.oauth_states.keys())}")
+            print(f"🔗 [get_simple_oauth_url] رابط المصادقة النهائي: {auth_url}")
             
             return auth_url, state
             
@@ -277,10 +278,18 @@ class TwitterOAuthManager:
         Returns:
             Dict: نتيجة المصادقة
         """
-        # التحقق من صحة الحالة
-        print(f"🔍 البحث عن state: {state}")
-        print(f"📋 الحالات المتاحة: {list(self.oauth_states.keys())}")
-        print(f"📊 عدد الحالات: {len(self.oauth_states)}")
+        # التحقق من صحة الحالة - معلومات تشخيصية شاملة
+        print(f"🔍 [handle_callback] بدء معالجة callback")
+        print(f"🔍 [handle_callback] البحث عن state: {state}")
+        print(f"🔍 [handle_callback] رمز التفويض: {code}")
+        print(f"📋 [handle_callback] الحالات المتاحة: {list(self.oauth_states.keys())}")
+        print(f"📊 [handle_callback] عدد الحالات: {len(self.oauth_states)}")
+        
+        # طباعة تفاصيل كل حالة محفوظة للمقارنة
+        for saved_state, data in self.oauth_states.items():
+            print(f"📋 [handle_callback] حالة محفوظة: '{saved_state}' - مستخدم: {data.get('username', 'غير محدد')}")
+            print(f"📋 [handle_callback] طول State المحفوظ: {len(saved_state)} vs المطلوب: {len(state)}")
+            print(f"📋 [handle_callback] هل متطابق؟ {saved_state == state}")
         
         if state not in self.oauth_states:
             return {

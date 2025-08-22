@@ -774,8 +774,21 @@ async def redirect_to_twitter():
     """التوجيه المباشر إلى Twitter للمصادقة"""
     try:
         auth_url, state = oauth_manager.get_public_oauth_url()
-        # إضافة state كمعامل query في الرابط
-        redirect_url = f"{auth_url}&state={state}"
+        
+        # معلومات تشخيصية للتتبع
+        print(f"🔗 [redirect_to_twitter] رابط المصادقة الأساسي: {auth_url}")
+        print(f"🔑 [redirect_to_twitter] State المُنشأ: {state}")
+        
+        # التحقق من وجود state في الرابط بالفعل
+        if 'state=' in auth_url:
+            print(f"⚠️  [redirect_to_twitter] تحذير: الرابط يحتوي بالفعل على state!")
+            redirect_url = auth_url  # استخدم الرابط كما هو
+        else:
+            # إضافة state كمعامل query في الرابط
+            redirect_url = f"{auth_url}&state={state}"
+        
+        print(f"🚀 [redirect_to_twitter] الرابط النهائي: {redirect_url}")
+        
         return RedirectResponse(url=redirect_url)
     except Exception as e:
         return HTMLResponse(content=f"""
