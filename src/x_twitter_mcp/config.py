@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", env="ENVIRONMENT")
     debug: bool = Field(default=True, env="DEBUG")
     
-    # إعدادات إضافية (للتوافق مع الملفات القديمة)
+    # إعدادات إضافية (للتوافق مع الكود القديم)
     twitter_api_key: str = Field(default="", env="TWITTER_API_KEY")
     twitter_api_secret: str = Field(default="", env="TWITTER_API_SECRET")
     api_secret_key: str = Field(default="", env="API_SECRET_KEY")
@@ -67,17 +67,14 @@ class Settings(BaseSettings):
     
     def is_production(self) -> bool:
         """التحقق من كون البيئة إنتاجية"""
-        return self.environment.lower() == "production"
+        try:
+            return self.environment.lower() == "production"
+        except:
+            return False
     
     def get_log_level(self) -> str:
-        """الحصول على مستوى التسجيل"""
-        try:
-            if hasattr(self, 'environment') and self.environment:
-                return "INFO" if self.environment.lower() == "production" else "DEBUG"
-            else:
-                return "DEBUG"
-        except:
-            return "DEBUG"
+        """الحصول على مستوى التسجيل - مبسط وآمن"""
+        return "DEBUG"  # دائماً DEBUG للتطوير
 
 # إنشاء كائن الإعدادات العام
 _settings = None
