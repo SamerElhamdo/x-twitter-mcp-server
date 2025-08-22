@@ -127,13 +127,19 @@ class TwitterOAuthManager:
             from .database import db_manager
             
             # تحويل oauth2_handler إلى بيانات قابلة للتخزين
+            # تأكد من أن جميع البيانات قابلة للتسلسل JSON
             handler_data = {
-                "client_id": oauth2_handler.client_id,
-                "redirect_uri": oauth2_handler.redirect_uri,
-                "scope": oauth2_handler.scope,
-                "state": state,
-                "code_verifier": code_verifier
+                "client_id": str(oauth2_handler.client_id) if oauth2_handler.client_id else "",
+                "redirect_uri": str(oauth2_handler.redirect_uri) if oauth2_handler.redirect_uri else "",
+                "scope": list(oauth2_handler.scope) if hasattr(oauth2_handler, 'scope') and callable(getattr(oauth2_handler, 'scope', None)) else (oauth2_handler.scope if oauth2_handler.scope else []),
+                "state": str(state) if state else "",
+                "code_verifier": str(code_verifier) if code_verifier else ""
             }
+            
+            # معلومات تشخيصية إضافية
+            print(f"🔍 [get_simple_oauth_url] نوع scope: {type(oauth2_handler.scope)}")
+            print(f"🔍 [get_simple_oauth_url] قيمة scope: {oauth2_handler.scope}")
+            print(f"🔍 [get_simple_oauth_url] handler_data: {handler_data}")
             
             # حفظ في قاعدة البيانات
             print(f"💾 [get_simple_oauth_url] محاولة حفظ state: {state}")
@@ -213,13 +219,19 @@ class TwitterOAuthManager:
             from .database import db_manager
             
             # تحويل oauth2_handler إلى بيانات قابلة للتخزين
+            # تأكد من أن جميع البيانات قابلة للتسلسل JSON
             handler_data = {
-                "client_id": oauth2_handler.client_id,
-                "redirect_uri": oauth2_handler.redirect_uri,
-                "scope": oauth2_handler.scope,
-                "state": state,
-                "code_verifier": code_verifier
+                "client_id": str(oauth2_handler.client_id) if oauth2_handler.client_id else "",
+                "redirect_uri": str(oauth2_handler.redirect_uri) if oauth2_handler.redirect_uri else "",
+                "scope": list(oauth2_handler.scope) if hasattr(oauth2_handler, 'scope') and callable(getattr(oauth2_handler, 'scope', None)) else (oauth2_handler.scope if oauth2_handler.scope else []),
+                "state": str(state) if state else "",
+                "code_verifier": str(code_verifier) if code_verifier else ""
             }
+            
+            # معلومات تشخيصية إضافية
+            print(f"🔍 [get_authorization_url] نوع scope: {type(oauth2_handler.scope)}")
+            print(f"🔍 [get_authorization_url] قيمة scope: {oauth2_handler.scope}")
+            print(f"🔍 [get_authorization_url] handler_data: {handler_data}")
             
             # حفظ في قاعدة البيانات
             if db_manager.save_oauth_state(state, username, json.dumps(handler_data)):
