@@ -793,18 +793,20 @@ async def redirect_to_twitter():
 # نقطة نهاية Callback
 @auth_app.get("/auth/callback")
 async def oauth_callback(
-    oauth_token: str = Query(..., description="رمز OAuth من Twitter"),
-    oauth_verifier: str = Query(..., description="رمز التحقق من Twitter"),
+    code: str = Query(..., description="رمز التفويض من Twitter OAuth 2.0"),
     state: str = Query(None, description="حالة OAuth (اختياري)")
 ):
-    """معالجة callback من Twitter OAuth 1.0a"""
+    """معالجة callback من Twitter OAuth 2.0"""
     try:
         if state:
             # استخدام username محدد
-            result = oauth_manager.handle_callback(oauth_token, oauth_verifier, state)
+            result = oauth_manager.handle_callback(state, code)
         else:
-            # استخدام الرابط العام
-            result = oauth_manager.handle_public_callback(oauth_token, oauth_verifier)
+            # استخدام الرابط العام (غير مدعوم في OAuth 2.0)
+            result = {
+                "success": False,
+                "error": "OAuth 2.0 يتطلب state parameter. استخدم رابط المصادقة المخصص."
+            }
         
         if result["success"]:
             # صفحة نجاح
