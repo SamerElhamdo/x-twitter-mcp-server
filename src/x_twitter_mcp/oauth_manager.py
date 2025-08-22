@@ -1,9 +1,12 @@
 import os
 import secrets
 import requests
+import time
+import json
 from typing import Optional, Dict, Tuple
 from urllib.parse import urlencode, parse_qs, urlparse
 import tweepy
+from tweepy.auth import OAuth2UserHandler
 from .database import db_manager
 
 # تحميل متغيرات البيئة من ملف .env
@@ -56,18 +59,15 @@ class TwitterOAuthManager:
         
         try:
             # استخدام Tweepy OAuth 2.0
-            oauth2_handler = tweepy.OAuth2UserHandler(
+            # OAuth2UserHandler يحتاج إلى معاملات مختلفة
+            oauth2_handler = OAuth2UserHandler(
                 client_id=self.client_id,
                 redirect_uri=self.redirect_uri,
-                scope=self.scopes,
-                client_secret=self.client_secret or None
+                scope=self.scopes
             )
             
-            # إنشاء رابط المصادقة مع PKCE
-            auth_url = oauth2_handler.get_authorization_url(
-                state=secrets.token_urlsafe(24),
-                code_challenge_method="S256"
-            )
+            # إنشاء رابط المصادقة
+            auth_url = oauth2_handler.get_authorization_url()
             
             # حفظ handler للاستخدام لاحقاً
             self.oauth_states['oauth2_handler'] = oauth2_handler
@@ -103,18 +103,15 @@ class TwitterOAuthManager:
         
         try:
             # استخدام Tweepy OAuth 2.0
-            oauth2_handler = tweepy.OAuth2UserHandler(
+            # OAuth2UserHandler يحتاج إلى معاملات مختلفة
+            oauth2_handler = OAuth2UserHandler(
                 client_id=self.client_id,
                 redirect_uri=self.redirect_uri,
-                scope=self.scopes,
-                client_secret=self.client_secret or None
+                scope=self.scopes
             )
             
-            # إنشاء رابط المصادقة مع PKCE
-            redirect_url = oauth2_handler.get_authorization_url(
-                state=state,
-                code_challenge_method="S256"
-            )
+            # إنشاء رابط المصادقة
+            redirect_url = oauth2_handler.get_authorization_url()
             
             # حفظ الحالة مع اسم المستخدم
             self.oauth_states[state] = {
@@ -138,59 +135,12 @@ class TwitterOAuthManager:
         Returns:
             Dict: نتيجة المصادقة
         """
-        try:
-            # استخدام Tweepy للحصول على access token
-            auth = tweepy.OAuthHandler(self.api_key, self.api_secret)
-            auth.request_token = {'oauth_token': oauth_token, 'oauth_token_secret': oauth_verifier}
-            
-            # الحصول على access token
-            auth.get_access_token(oauth_verifier)
-            
-            # إنشاء API client للحصول على معلومات المستخدم
-            api = tweepy.API(auth, wait_on_rate_limit=True)
-            user_info = api.verify_credentials()
-            
-            # استخدام username من Twitter
-            twitter_username = user_info.screen_name
-            if not twitter_username:
-                return {
-                    "success": False,
-                    "error": "لم يتم العثور على username في معلومات المستخدم"
-                }
-            
-            # حفظ الحساب في قاعدة البيانات
-            success = db_manager.add_account(
-                username=twitter_username,
-                api_key=self.api_key,
-                api_secret=self.api_secret,
-                access_token=auth.access_token,
-                access_token_secret=auth.access_token_secret,
-                bearer_token="",  # OAuth 1.0a لا يستخدم bearer_token
-                display_name=user_info.name or twitter_username
-            )
-            
-            if success:
-                return {
-                    "success": True,
-                    "message": f"تم إضافة الحساب '@{twitter_username}' بنجاح",
-                    "user_info": {
-                        "username": user_info.screen_name,
-                        "name": user_info.name,
-                        "id": user_info.id
-                    },
-                    "username": twitter_username
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "فشل في حفظ الحساب"
-                }
-                
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"خطأ في المصادقة: {str(e)}"
-            }
+        # هذه الدالة لم تعد مدعومة في OAuth 2.0
+        # يمكن إزالتها أو تحديثها لتعمل مع OAuth 2.0
+        return {
+            "success": False,
+            "error": "هذه الدالة لم تعد مدعومة في OAuth 2.0. استخدم handle_callback بدلاً منها."
+        }
     
     def create_client_for_user(self, username: str) -> Optional[tweepy.Client]:
         """إنشاء عميل Twitter للمستخدم المحدد
@@ -249,11 +199,10 @@ class TwitterOAuthManager:
                 return None
             
             # إنشاء OAuth 2.0 handler
-            oauth2_handler = tweepy.OAuth2UserHandler(
+            oauth2_handler = OAuth2UserHandler(
                 client_id=account.api_key,  # client_id
                 redirect_uri=self.redirect_uri,
-                scope=self.scopes,
-                client_secret=account.api_secret  # client_secret
+                scope=self.scopes
             )
             
             # تجديد التوكن
@@ -315,7 +264,7 @@ class TwitterOAuthManager:
             # استخدام OAuth 2.0 handler لإكمال المصادقة
             token_data = oauth2_handler.fetch_token(code=code)
             
-            access_token = access_token = token_data.get("access_token")
+            access_token = token_data.get("access_token")
             refresh_token = token_data.get("refresh_token")
             expires_in = token_data.get("expires_in", 0)
             
@@ -390,5 +339,5 @@ class TwitterOAuthManager:
         for state in expired_states:
             del self.oauth_states[state]
 
-# إنشاء مدير OAuth عام
+# إنشاء نسخة واحدة من مدير المصادقة
 oauth_manager = TwitterOAuthManager()
