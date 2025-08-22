@@ -58,16 +58,24 @@ class TwitterOAuthManager:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
         try:
-            # استخدام Tweepy OAuth 2.0
-            # OAuth2UserHandler يحتاج إلى معاملات مختلفة
+            # استخدام Tweepy OAuth 2.0 مع PKCE
+            # Twitter API v2 يتطلب PKCE
             oauth2_handler = OAuth2UserHandler(
                 client_id=self.client_id,
                 redirect_uri=self.redirect_uri,
                 scope=self.scopes
             )
             
-            # إنشاء رابط المصادقة
+            # إنشاء رابط المصادقة مع PKCE
+            # OAuth2UserHandler يدعم PKCE تلقائياً
+            # Twitter API v2 يتطلب PKCE
             auth_url = oauth2_handler.get_authorization_url()
+            
+            # معلومات تشخيصية للمساعدة في حل المشكلة
+            print(f"🔗 رابط المصادقة: {auth_url}")
+            print(f"🆔 Client ID: {self.client_id}")
+            print(f"🔄 Redirect URI: {self.redirect_uri}")
+            print(f"📋 Scopes: {', '.join(self.scopes)}")
             
             # حفظ handler للاستخدام لاحقاً
             self.oauth_states['oauth2_handler'] = oauth2_handler
@@ -102,16 +110,21 @@ class TwitterOAuthManager:
         state = self.generate_oauth_state()
         
         try:
-            # استخدام Tweepy OAuth 2.0
-            # OAuth2UserHandler يحتاج إلى معاملات مختلفة
+            # استخدام Tweepy OAuth 2.0 مع PKCE
             oauth2_handler = OAuth2UserHandler(
                 client_id=self.client_id,
                 redirect_uri=self.redirect_uri,
                 scope=self.scopes
             )
             
-            # إنشاء رابط المصادقة
+            # إنشاء رابط المصادقة مع PKCE
+            # OAuth2UserHandler يدعم PKCE تلقائياً
+            # Twitter API v2 يتطلب PKCE
             redirect_url = oauth2_handler.get_authorization_url()
+            
+            # معلومات تشخيصية
+            print(f"🔗 رابط المصادقة للمستخدم {username}: {redirect_url}")
+            print(f"🔑 State: {state}")
             
             # حفظ الحالة مع اسم المستخدم
             self.oauth_states[state] = {
