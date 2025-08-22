@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "twitter-mcp": {
+      "command": "python",
+      "args": ["-m", "src.x_twitter_mcp"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      },
+      "description": "Twitter MCP Server with OAuth 2.0 support"
+    }
+  }
+}

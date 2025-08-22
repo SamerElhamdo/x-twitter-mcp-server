@@ -1,39 +1,127 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-packages = ["src/x_twitter_mcp"]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "x-twitter-mcp"
-version = "0.2.0"
-description = "Twitter MCP server with local database authentication - store credentials once, use username only"
+version = "2.0.0"
+description = "Twitter MCP Server with OAuth 2.0 support"
 readme = "README.md"
-requires-python = ">=3.10"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
-    { name = "Rafal Janicki", email = "rafal@kult.io" }
+    {name = "Twitter MCP Team", email = "team@example.com"}
 ]
+maintainers = [
+    {name = "Twitter MCP Team", email = "team@example.com"}
+]
+keywords = ["twitter", "mcp", "oauth2", "api", "social-media", "fastapi", "tweepy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Communications :: Chat",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+requires-python = ">=3.8"
 dependencies = [
-    "fastmcp>=2.2.0",
-    "tweepy>=4.15.0",
+    "fastmcp>=2.0.0",
+    "tweepy>=4.14.0",
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
     "sqlalchemy>=2.0.0",
-    "pydantic>=2.0.0"
+    "pydantic>=2.0.0",
+    "python-multipart>=0.0.6",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "mcp-proxy>=0.1.0",
 ]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.991",
+]
+production = [
+    "gunicorn>=20.1.0",
+    "psycopg2-binary>=2.9.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/rafaljanicki/x-twitter-mcp-server"
-Issues = "https://github.com/rafaljanicki/x-twitter-mcp-server/issues"
+Homepage = "https://github.com/yourusername/x-twitter-mcp-server"
+Documentation = "https://github.com/yourusername/x-twitter-mcp-server#readme"
+Repository = "https://github.com/yourusername/x-twitter-mcp-server"
+"Bug Tracker" = "https://github.com/yourusername/x-twitter-mcp-server/issues"
 
 [project.scripts]
-x-twitter-mcp-server = "x_twitter_mcp:server.run"
+x-twitter-mcp-server = "x_twitter_mcp.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.md", "*.yml", "*.yaml", "*.json"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
