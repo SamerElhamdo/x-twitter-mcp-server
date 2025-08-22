@@ -2,7 +2,7 @@
   "mcpServers": {
     "twitter-mcp": {
       "command": "python",
-      "args": ["run_server.py"],
+      "args": ["-m", "src.x_twitter_mcp.mcp_server"],
       "env": {
         "PYTHONUNBUFFERED": "1"
       },
@@ -13,6 +13,6 @@
     "host": "0.0.0.0",
     "port": 9000,
     "allowOrigin": "*",
-    "targetCommand": "python run_server.py"
+    "targetCommand": "python -m src.x_twitter_mcp.mcp_server"
   }
 }

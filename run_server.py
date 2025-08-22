@@ -27,7 +27,10 @@ def main():
     
     # إضافة معلومات حول mcp-proxy
     print("💡 ملاحظة: للاستخدام مع SSE، استخدم mcp-proxy:")
-    print("   mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python run_server.py")
+    print("   mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python -m src.x_twitter_mcp.mcp_server")
+    print()
+    print("📝 ملاحظة: هذا الخادم (run_server.py) مخصص للمصادقة وإدارة الحسابات")
+    print("   للاستخدام مع أدوات AI، استخدم mcp_server.py")
     print()
     
     args = parser.parse_args()

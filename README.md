@@ -255,14 +255,18 @@ python run_server.py --debug
 ### تشغيل مع mcp-proxy:
 ```bash
 # الطريقة الأساسية
-mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python run_server.py
+mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python -m src.x_twitter_mcp.mcp_server
 
 # مع خيارات إضافية
-mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' --log-level=info -- python run_server.py
+mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' --log-level=info -- python -m src.x_twitter_mcp.mcp_server
 
 # تشغيل في الخلفية
-nohup mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python run_server.py > server.log 2>&1 &
+nohup mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python -m src.x_twitter_mcp.mcp_server > server.log 2>&1 &
 ```
+
+### ملاحظة مهمة:
+- **`run_server.py`**: خادم FastAPI للمصادقة وإدارة الحسابات
+- **`mcp_server.py`**: خادم MCP للاستخدام مع mcp-proxy وأدوات AI
 
 ## 🐳 Docker (اختياري)
 
