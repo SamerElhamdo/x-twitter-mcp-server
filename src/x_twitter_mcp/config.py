@@ -2,10 +2,10 @@ import os
 from typing import Optional
 try:
     from pydantic_settings import BaseSettings
-    from pydantic import Field
+    from pydantic import Field, ConfigDict
 except ImportError:
     # Fallback for older versions
-    from pydantic import BaseSettings, Field
+    from pydantic import BaseSettings, Field, ConfigDict
 
 class Settings(BaseSettings):
     """إعدادات النظام - محدث لـ OAuth 2.0"""
@@ -32,9 +32,18 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", env="ENVIRONMENT")
     debug: bool = Field(default=True, env="DEBUG")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    # إعدادات إضافية (للتوافق مع الملفات القديمة)
+    twitter_api_key: str = Field(default="", env="TWITTER_API_KEY")
+    twitter_api_secret: str = Field(default="", env="TWITTER_API_SECRET")
+    api_secret_key: str = Field(default="", env="API_SECRET_KEY")
+    access_token_expire_minutes: int = Field(default=60, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    
+    # تكوين Pydantic
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"  # تجاهل المتغيرات الإضافية
+    )
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
