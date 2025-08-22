@@ -91,19 +91,12 @@ def main():
     
     # تشغيل الخادم
     try:
-        # الحصول على مستوى التسجيل
-        log_level = "DEBUG"  # افتراضي
-        try:
-            log_level = settings.get_log_level()
-        except:
-            log_level = "DEBUG"
-        
         uvicorn.run(
             auth_app,
             host=settings.host,
             port=settings.port,
             reload=args.reload or settings.debug,
-            log_level=log_level,
+            log_level="DEBUG",  # استخدام قيمة ثابتة
             access_log=True
         )
     except KeyboardInterrupt:
