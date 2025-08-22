@@ -776,20 +776,14 @@ async def redirect_to_twitter():
         auth_url, state = oauth_manager.get_public_oauth_url()
         
         # معلومات تشخيصية للتتبع
-        print(f"🔗 [redirect_to_twitter] رابط المصادقة الأساسي: {auth_url}")
-        print(f"🔑 [redirect_to_twitter] State المُنشأ: {state}")
+        print(f"🔗 [redirect_to_twitter] رابط المصادقة: {auth_url}")
+        print(f"🔑 [redirect_to_twitter] State (من Tweepy): {state}")
         
-        # التحقق من وجود state في الرابط بالفعل
-        if 'state=' in auth_url:
-            print(f"⚠️  [redirect_to_twitter] تحذير: الرابط يحتوي بالفعل على state!")
-            redirect_url = auth_url  # استخدم الرابط كما هو
-        else:
-            # إضافة state كمعامل query في الرابط
-            redirect_url = f"{auth_url}&state={state}"
+        # لا تُعدّل الرابط - أعد التوجيه كما هو
+        # Tweepy يتعامل مع state تلقائياً
+        print(f"🚀 [redirect_to_twitter] إعادة التوجيه إلى: {auth_url}")
         
-        print(f"🚀 [redirect_to_twitter] الرابط النهائي: {redirect_url}")
-        
-        return RedirectResponse(url=redirect_url)
+        return RedirectResponse(url=auth_url)
     except Exception as e:
         return HTMLResponse(content=f"""
         <!DOCTYPE html>
