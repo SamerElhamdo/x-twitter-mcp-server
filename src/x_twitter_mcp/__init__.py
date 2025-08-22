@@ -16,19 +16,9 @@ __version__ = "2.0.0"
 __author__ = "Twitter MCP Team"
 __description__ = "Twitter MCP Server with OAuth 2.0 support"
 
-# استيراد المكونات الرئيسية
-from .oauth_manager import oauth_manager, TwitterOAuth2Manager
-from .twitter_client import twitter_helper, TwitterClientHelper
-from .database import db_manager, DatabaseManager, TwitterAccount
+# استيراد المكونات الرئيسية - تجنب الاستيراد الدائري
 from .auth_api import auth_app
 
 __all__ = [
-    "oauth_manager",
-    "TwitterOAuth2Manager", 
-    "twitter_helper",
-    "TwitterClientHelper",
-    "db_manager",
-    "DatabaseManager",
-    "TwitterAccount",
     "auth_app"
 ]
