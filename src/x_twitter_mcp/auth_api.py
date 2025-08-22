@@ -773,6 +773,7 @@ async def get_simple_oauth():
 async def redirect_to_twitter():
     """التوجيه المباشر إلى Twitter للمصادقة"""
     try:
+        print(f"🚀 [redirect_to_twitter] بدء إنشاء رابط المصادقة...")
         auth_url, state = oauth_manager.get_public_oauth_url()
         
         # معلومات تشخيصية للتتبع
@@ -1496,6 +1497,42 @@ async def debug_oauth_states():
                 "db_path": db_manager.DB_PATH,
                 "count": session.query(db_manager.OAuthState).count(),
                 "latest": [r.to_dict() for r in rows],
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "pid": os.getpid(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+# نقطة نهاية تشخيص قاعدة البيانات
+@auth_app.get("/debug/database")
+async def debug_database():
+    """أداة تشخيص قاعدة البيانات"""
+    try:
+        from .database import db_manager
+        import os
+        
+        with db_manager.get_session() as session:
+            # التحقق من وجود الجداول
+            tables = []
+            try:
+                oauth_count = session.query(db_manager.OAuthState).count()
+                tables.append({"table": "oauth_states", "count": oauth_count})
+            except:
+                tables.append({"table": "oauth_states", "error": "Table not found"})
+            
+            try:
+                accounts_count = session.query(db_manager.TwitterAccount).count()
+                tables.append({"table": "twitter_accounts", "count": accounts_count})
+            except:
+                tables.append({"table": "twitter_accounts", "error": "Table not found"})
+            
+            return {
+                "pid": os.getpid(),
+                "db_path": db_manager.DB_PATH,
+                "tables": tables,
                 "timestamp": datetime.utcnow().isoformat()
             }
     except Exception as e:

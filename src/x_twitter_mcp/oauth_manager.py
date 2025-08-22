@@ -81,6 +81,10 @@ class TwitterOAuthManager:
         Returns:
             Tuple[str, str]: (رابط المصادقة، حالة OAuth)
         """
+        print(f"🚀 [get_simple_oauth_url] بدء إنشاء رابط المصادقة")
+        print(f"🚀 [get_simple_oauth_url] Client ID: {self.client_id}")
+        print(f"🚀 [get_simple_oauth_url] Redirect URI: {self.redirect_uri}")
+        
         if not self.client_id:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
@@ -164,8 +168,11 @@ class TwitterOAuthManager:
         Returns:
             Tuple[str, str]: (رابط المصادقة، حالة OAuth)
         """
+        print(f"🚀 [get_public_oauth_url] بدء إنشاء رابط عام...")
         # استخدام الرابط الصحيح لحل مشكلة redirect_after_login
         auth_url, state = self.get_simple_oauth_url()
+        print(f"🚀 [get_public_oauth_url] تم إنشاء رابط: {auth_url[:50]}...")
+        print(f"🚀 [get_public_oauth_url] State: {state}")
         return auth_url, state
     
     def get_authorization_url(self, username: str) -> Tuple[str, str]:
