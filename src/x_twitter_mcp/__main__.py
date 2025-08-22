@@ -10,7 +10,7 @@ import uvicorn
 # إضافة المجلد الحالي إلى Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from x_twitter_mcp.server import app
+from x_twitter_mcp.auth_api import auth_app
 from x_twitter_mcp.config import get_settings
 
 def main():
@@ -25,7 +25,7 @@ def main():
     print("\n" + "="*50)
     
     uvicorn.run(
-        "x_twitter_mcp.server:app",
+        auth_app,
         host=settings.host,
         port=settings.port,
         reload=True,

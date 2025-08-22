@@ -60,6 +60,7 @@ setup(
     entry_points={
         "console_scripts": [
             "x-twitter-mcp-server=x_twitter_mcp.__main__:main",
+            "twitter-mcp-server=x_twitter_mcp.__main__:main",
         ],
     },
     include_package_data=True,

@@ -2,11 +2,17 @@
   "mcpServers": {
     "twitter-mcp": {
       "command": "python",
-      "args": ["-m", "src.x_twitter_mcp"],
+      "args": ["run_server.py"],
       "env": {
         "PYTHONUNBUFFERED": "1"
       },
       "description": "Twitter MCP Server with OAuth 2.0 support"
     }
+  },
+  "proxy": {
+    "host": "0.0.0.0",
+    "port": 9000,
+    "allowOrigin": "*",
+    "targetCommand": "python run_server.py"
   }
 }

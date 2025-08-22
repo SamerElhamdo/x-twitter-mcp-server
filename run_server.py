@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.x_twitter_mcp.config import get_settings
 from src.x_twitter_mcp.database import db_manager
+from src.x_twitter_mcp.auth_api import auth_app
 
 def main():
     """الدالة الرئيسية لتشغيل الخادم"""
@@ -23,6 +24,11 @@ def main():
     parser.add_argument("--port", type=int, help="منفذ الخادم (افتراضي: 8000)")
     parser.add_argument("--debug", action="store_true", help="تفعيل وضع التطوير")
     parser.add_argument("--reload", action="store_true", help="إعادة التحميل التلقائي")
+    
+    # إضافة معلومات حول mcp-proxy
+    print("💡 ملاحظة: للاستخدام مع SSE، استخدم mcp-proxy:")
+    print("   mcp-proxy --host=0.0.0.0 --port=9000 --allow-origin='*' -- python run_server.py")
+    print()
     
     args = parser.parse_args()
     
@@ -73,7 +79,7 @@ def main():
     # تشغيل الخادم
     try:
         uvicorn.run(
-            "src.x_twitter_mcp.server:app",
+            auth_app,
             host=settings.host,
             port=settings.port,
             reload=args.reload or settings.debug,
