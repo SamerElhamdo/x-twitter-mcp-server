@@ -1,6 +1,11 @@
 import os
 from typing import Optional
-from pydantic import BaseSettings, Field
+try:
+    from pydantic_settings import BaseSettings
+    from pydantic import Field
+except ImportError:
+    # Fallback for older versions
+    from pydantic import BaseSettings, Field
 
 class Settings(BaseSettings):
     """إعدادات النظام - محدث لـ OAuth 2.0"""
