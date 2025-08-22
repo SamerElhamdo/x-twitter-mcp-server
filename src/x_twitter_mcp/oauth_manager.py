@@ -23,7 +23,9 @@ class TwitterOAuthManager:
         # OAuth 2.0 credentials
         self.client_id = os.getenv("TWITTER_CLIENT_ID", "")
         self.client_secret = os.getenv("TWITTER_CLIENT_SECRET", "")
-        self.redirect_uri = os.getenv("TWITTER_REDIRECT_URI", "http://localhost:8000/auth/callback")
+        
+        # تحديد redirect URI بناءً على البيئة
+        self.redirect_uri = self._get_redirect_uri()
         
         # OAuth 2.0 scopes
         self.scopes = [
@@ -42,6 +44,31 @@ class TwitterOAuthManager:
         if not self.client_id:
             print("⚠️  تحذير: TWITTER_CLIENT_ID غير محدد")
             print("💡 تأكد من إعداد ملف .env أو متغيرات البيئة")
+        
+        print(f"🌐 [OAuth Manager] Redirect URI: {self.redirect_uri}")
+    
+    def _get_redirect_uri(self) -> str:
+        """تحديد redirect URI بناءً على البيئة"""
+        # أولاً، تحقق من متغير البيئة
+        env_redirect = os.getenv("TWITTER_REDIRECT_URI")
+        if env_redirect:
+            return env_redirect
+        
+        # إذا لم يكن محدد، استخدم الدومين أو localhost
+        host = os.getenv("HOST", "127.0.0.1")
+        port = os.getenv("PORT", "8000")
+        
+        # إذا كان HOST = 0.0.0.0، استخدم localhost
+        if host == "0.0.0.0":
+            host = "127.0.0.1"
+        
+        # تحقق من وجود دومين
+        domain = os.getenv("DOMAIN")
+        if domain:
+            return f"https://{domain}/auth/callback"
+        
+        # استخدم localhost
+        return f"http://{host}:{port}/auth/callback"
         
     def generate_oauth_state(self) -> str:
         """إنشاء حالة OAuth عشوائية"""
