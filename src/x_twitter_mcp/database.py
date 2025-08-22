@@ -255,9 +255,11 @@ class DatabaseManager:
                 # حذف الحالات المنتهية الصلاحية
                 from datetime import datetime, timedelta
                 expired_time = datetime.utcnow() - timedelta(minutes=10)
-                session.query(OAuthState).filter(
+                print(f"🧹 [save_oauth_state] حذف الحالات المنتهية الصلاحية قبل: {expired_time}")
+                deleted_count = session.query(OAuthState).filter(
                     OAuthState.expires_at < expired_time
                 ).delete()
+                print(f"🧹 [save_oauth_state] تم حذف {deleted_count} حالة منتهية الصلاحية")
                 
                 # حفظ الحالة الجديدة
                 oauth_state = OAuthState(
@@ -277,13 +279,21 @@ class DatabaseManager:
         """الحصول على حالة OAuth من قاعدة البيانات"""
         try:
             with self.get_session() as session:
+                print(f"🔍 [get_oauth_state] البحث عن state: {state}")
                 oauth_state = session.query(OAuthState).filter(
                     OAuthState.state == state,
                     OAuthState.expires_at > datetime.utcnow()
                 ).first()
+                
+                if oauth_state:
+                    print(f"✅ [get_oauth_state] تم العثور على state: {state}")
+                    print(f"⏰ [get_oauth_state] تاريخ انتهاء الصلاحية: {oauth_state.expires_at}")
+                else:
+                    print(f"❌ [get_oauth_state] State غير موجود أو منتهي الصلاحية: {state}")
+                
                 return oauth_state
         except Exception as e:
-            print(f"خطأ في الحصول على حالة OAuth: {e}")
+            print(f"❌ [get_oauth_state] خطأ في الحصول على حالة OAuth: {e}")
             return None
     
     def delete_oauth_state(self, state: str) -> bool:
@@ -298,6 +308,16 @@ class DatabaseManager:
         except Exception as e:
             print(f"خطأ في حذف حالة OAuth: {e}")
             return False
+    
+    def get_all_oauth_states(self) -> List[OAuthState]:
+        """الحصول على جميع حالات OAuth (للتشخيص)"""
+        try:
+            with self.get_session() as session:
+                states = session.query(OAuthState).all()
+                return states
+        except Exception as e:
+            print(f"خطأ في الحصول على جميع حالات OAuth: {e}")
+            return []
     
     def update_tokens(self, username: str, access_token: str, 
                      refresh_token: Optional[str] = None, expires_at: Optional[datetime] = None) -> bool:

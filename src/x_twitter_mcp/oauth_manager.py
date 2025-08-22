@@ -63,6 +63,7 @@ class TwitterOAuthManager:
         try:
             # استخدام Tweepy OAuth 2.0 مع PKCE
             # Twitter API v2 يتطلب PKCE
+            # client_secret اختياري - لا نحتاجه إلا إذا كان confidential client
             oauth2_handler = OAuth2UserHandler(
                 client_id=self.client_id,
                 redirect_uri=self.redirect_uri,
@@ -92,10 +93,21 @@ class TwitterOAuthManager:
             }
             
             # حفظ في قاعدة البيانات
-            if db_manager.save_oauth_state(state, "default_user", json.dumps(handler_data)):
-                print(f"💾 [get_simple_oauth_url] تم حفظ state في قاعدة البيانات: {state}")
+            print(f"💾 [get_simple_oauth_url] محاولة حفظ state: {state}")
+            save_result = db_manager.save_oauth_state(state, "default_user", json.dumps(handler_data))
+            print(f"💾 [get_simple_oauth_url] نتيجة الحفظ: {save_result}")
+            
+            if save_result:
+                print(f"✅ [get_simple_oauth_url] تم حفظ state في قاعدة البيانات: {state}")
                 print(f"👤 [get_simple_oauth_url] للمستخدم: default_user")
                 print(f"🔗 [get_simple_oauth_url] رابط المصادقة النهائي: {auth_url}")
+                
+                # التحقق من أن state تم حفظه فعلاً
+                saved_state = db_manager.get_oauth_state(state)
+                if saved_state:
+                    print(f"🔍 [get_simple_oauth_url] تأكيد: state موجود في قاعدة البيانات")
+                else:
+                    print(f"⚠️  [get_simple_oauth_url] تحذير: state غير موجود في قاعدة البيانات!")
             else:
                 print(f"❌ [get_simple_oauth_url] فشل في حفظ state في قاعدة البيانات")
             
@@ -131,6 +143,7 @@ class TwitterOAuthManager:
         
         try:
             # استخدام Tweepy OAuth 2.0 مع PKCE
+            # client_secret اختياري - لا نحتاجه إلا إذا كان confidential client
             oauth2_handler = OAuth2UserHandler(
                 client_id=self.client_id,
                 redirect_uri=self.redirect_uri,
@@ -293,10 +306,21 @@ class TwitterOAuthManager:
         
         # الحصول على الحالة من قاعدة البيانات
         from .database import db_manager
+        
+        print(f"🔍 [handle_callback] البحث عن state في قاعدة البيانات: {state}")
         oauth_state = db_manager.get_oauth_state(state)
         
         if not oauth_state:
             print(f"❌ [handle_callback] State غير موجود أو منتهي الصلاحية: {state}")
+            
+            # محاولة معرفة ما حدث - البحث عن جميع الحالات
+            print(f"🔍 [handle_callback] البحث عن جميع الحالات في قاعدة البيانات...")
+            all_states = db_manager.get_all_oauth_states()
+            print(f"📊 [handle_callback] إجمالي الحالات في قاعدة البيانات: {len(all_states)}")
+            
+            for state_obj in all_states:
+                print(f"📋 [handle_callback] حالة موجودة: '{state_obj.state}' - مستخدم: {state_obj.username} - تاريخ: {state_obj.created_at}")
+            
             return {
                 "success": False,
                 "error": f"حالة OAuth غير صالحة أو منتهية الصلاحية. State: {state}"
