@@ -133,6 +133,12 @@ class TwitterOAuthManager:
                 "oauth2_handler": oauth2_handler
             }
             
+            # معلومات تشخيصية
+            print(f"💾 تم حفظ state: {state}")
+            print(f"👤 للمستخدم: {username}")
+            print(f"📊 إجمالي الحالات: {len(self.oauth_states)}")
+            print(f"🔑 الحالات المتاحة: {list(self.oauth_states.keys())}")
+            
             return redirect_url, state
             
         except Exception as e:
@@ -257,10 +263,14 @@ class TwitterOAuthManager:
             Dict: نتيجة المصادقة
         """
         # التحقق من صحة الحالة
+        print(f"🔍 البحث عن state: {state}")
+        print(f"📋 الحالات المتاحة: {list(self.oauth_states.keys())}")
+        print(f"📊 عدد الحالات: {len(self.oauth_states)}")
+        
         if state not in self.oauth_states:
             return {
                 "success": False,
-                "error": "حالة OAuth غير صالحة"
+                "error": f"حالة OAuth غير صالحة. State: {state}, المتاح: {list(self.oauth_states.keys())}"
             }
         
         oauth_data = self.oauth_states[state]
