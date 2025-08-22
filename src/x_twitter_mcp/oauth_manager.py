@@ -371,6 +371,8 @@ class TwitterOAuthManager:
         from .database import db_manager
         
         print(f"🔍 [handle_callback] البحث عن state في قاعدة البيانات: {state}")
+        print(f"↩️ [callback] redirect_uri_used={self.redirect_uri}")
+        
         oauth_state = db_manager.get_oauth_state(state)
         
         if not oauth_state:
@@ -391,6 +393,7 @@ class TwitterOAuthManager:
         
         print(f"✅ [handle_callback] تم العثور على state: {state}")
         print(f"👤 [handle_callback] المستخدم: {oauth_state.username}")
+        print(f"⏰ [handle_callback] تاريخ انتهاء الصلاحية: {oauth_state.expires_at}")
         
         # استخراج البيانات المحفوظة
         try:

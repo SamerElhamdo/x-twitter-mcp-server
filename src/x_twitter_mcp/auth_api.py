@@ -1481,6 +1481,30 @@ async def get_tools_fast():
         "description": "Twitter MCP Server Tools for AI Agent"
     }
 
+# نقطة نهاية تشخيص OAuth states
+@auth_app.get("/debug/oauth-states")
+async def debug_oauth_states():
+    """أداة تشخيص سريعة لـ OAuth states"""
+    try:
+        from .database import db_manager
+        import os
+        
+        with db_manager.get_session() as session:
+            rows = session.query(db_manager.OAuthState).order_by(db_manager.OAuthState.created_at.desc()).limit(10).all()
+            return {
+                "pid": os.getpid(),
+                "db_path": db_manager.DB_PATH,
+                "count": session.query(db_manager.OAuthState).count(),
+                "latest": [r.to_dict() for r in rows],
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "pid": os.getpid(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 # نقطة نهاية لاختبار الحساب (اختبار سريع)
 @auth_app.get("/accounts/{username}/quick-test")
 async def quick_test_account(username: str):

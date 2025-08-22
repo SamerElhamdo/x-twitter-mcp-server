@@ -5,9 +5,23 @@ import os
 from typing import Optional, List
 import json
 
-# إنشاء قاعدة البيانات
-DATABASE_URL = "sqlite:///./twitter_accounts.db"
+# إنشاء قاعدة البيانات بمسار مطلق ومشترك
+import os
+
+# تحديد المسار المطلق لقاعدة البيانات
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DB_DIR = os.path.join(BASE_DIR, "data")
+DB_PATH = os.path.join(DB_DIR, "twitter_accounts.db")
+
+# إنشاء مجلد البيانات إذا لم يكن موجوداً
+os.makedirs(DB_DIR, exist_ok=True)
+
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+print(f"📦 [DB] Using SQLite at: {DB_PATH}")
+print(f"📦 [DB] Base directory: {BASE_DIR}")
+print(f"📦 [DB] Data directory: {DB_DIR}")
 
 # إنشاء جلسة قاعدة البيانات
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -252,9 +266,13 @@ class DatabaseManager:
         """حفظ حالة OAuth في قاعدة البيانات"""
         try:
             with self.get_session() as session:
+                # لوج موحد مع PID ومسار DB
+                self._debug_db(session, "save_oauth_state")
+                
                 # حذف الحالات المنتهية الصلاحية
                 from datetime import datetime, timedelta
-                expired_time = datetime.utcnow() - timedelta(minutes=10)
+                # زيادة المهلة إلى 20 دقيقة للاختبار
+                expired_time = datetime.utcnow() - timedelta(minutes=20)
                 print(f"🧹 [save_oauth_state] حذف الحالات المنتهية الصلاحية قبل: {expired_time}")
                 deleted_count = session.query(OAuthState).filter(
                     OAuthState.expires_at < expired_time
@@ -266,19 +284,40 @@ class DatabaseManager:
                     state=state,
                     username=username,
                     oauth2_handler_data=oauth2_handler_data,
-                    expires_at=datetime.utcnow() + timedelta(minutes=10)
+                    expires_at=datetime.utcnow() + timedelta(minutes=20)  # 20 دقيقة
                 )
                 session.add(oauth_state)
                 session.commit()
+                
+                # لوج بعد الحفظ مع آخر states
+                self._debug_db_after_save(session, state)
                 return True
         except Exception as e:
-            print(f"خطأ في حفظ حالة OAuth: {e}")
+            print(f"❌ [save_oauth_state] خطأ في حفظ حالة OAuth: {e}")
             return False
+    
+    def _debug_db(self, session, where):
+        """لوج موحد مع PID ومسار DB"""
+        import os
+        count = session.query(OAuthState).count()
+        print(f"🧭 [{where}] PID={os.getpid()} DB={DB_PATH} oauth_states_count={count}")
+    
+    def _debug_db_after_save(self, session, new_state):
+        """لوج بعد الحفظ مع آخر states"""
+        # الحصول على آخر 5 states
+        latest_states = session.query(OAuthState).order_by(OAuthState.created_at.desc()).limit(5).all()
+        print(f"💾 [save_oauth_state] آخر 5 states محفوظة:")
+        for i, state_obj in enumerate(latest_states, 1):
+            print(f"   {i}. {state_obj.state} - {state_obj.username} - {state_obj.created_at}")
+        print(f"💾 [save_oauth_state] تم حفظ state جديد: {new_state}")
     
     def get_oauth_state(self, state: str) -> Optional[OAuthState]:
         """الحصول على حالة OAuth من قاعدة البيانات"""
         try:
             with self.get_session() as session:
+                # لوج موحد مع PID ومسار DB
+                self._debug_db(session, "get_oauth_state")
+                
                 print(f"🔍 [get_oauth_state] البحث عن state: {state}")
                 oauth_state = session.query(OAuthState).filter(
                     OAuthState.state == state,
@@ -288,8 +327,26 @@ class DatabaseManager:
                 if oauth_state:
                     print(f"✅ [get_oauth_state] تم العثور على state: {state}")
                     print(f"⏰ [get_oauth_state] تاريخ انتهاء الصلاحية: {oauth_state.expires_at}")
+                    print(f"👤 [get_oauth_state] المستخدم: {oauth_state.username}")
                 else:
                     print(f"❌ [get_oauth_state] State غير موجود أو منتهي الصلاحية: {state}")
+                    
+                    # معلومات تشخيصية إضافية
+                    current_time = datetime.utcnow()
+                    print(f"🕐 [get_oauth_state] الوقت الحالي: {current_time}")
+                    
+                    # البحث عن state بدون مراعاة انتهاء الصلاحية
+                    expired_state = session.query(OAuthState).filter(
+                        OAuthState.state == state
+                    ).first()
+                    
+                    if expired_state:
+                        print(f"⚠️  [get_oauth_state] State موجود لكن منتهي الصلاحية:")
+                        print(f"   - انتهاء الصلاحية: {expired_state.expires_at}")
+                        print(f"   - الوقت الحالي: {current_time}")
+                        print(f"   - الفرق: {expired_state.expires_at - current_time}")
+                    else:
+                        print(f"❌ [get_oauth_state] State غير موجود نهائياً")
                 
                 return oauth_state
         except Exception as e:
