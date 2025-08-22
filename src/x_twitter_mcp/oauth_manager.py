@@ -36,7 +36,7 @@ class TwitterOAuthManager:
         ]
         
         # قاعدة بيانات للجلسات المؤقتة
-        self.oauth_states = {}  # في الإنتاج، استخدم Redis أو قاعدة بيانات
+        # تخزين حالات OAuth في قاعدة البيانات
         
         # التحقق من التكوين
         if not self.client_id:
@@ -81,19 +81,23 @@ class TwitterOAuthManager:
             print(f"📋 Scopes: {', '.join(self.scopes)}")
             print(f"🔑 State: {state}")
             
-            # حفظ الحالة مع username افتراضي
-            self.oauth_states[state] = {
-                "username": "default_user",
-                "timestamp": int(time.time()),
-                "oauth2_handler": oauth2_handler
-            }
-            
-            # معلومات تشخيصية مفصلة
-            print(f"💾 [get_simple_oauth_url] تم حفظ state: {state}")
+                    # حفظ الحالة في قاعدة البيانات بدلاً من الذاكرة المؤقتة
+        from .database import db_manager
+        
+        # تحويل oauth2_handler إلى بيانات قابلة للتخزين
+        handler_data = {
+            "client_id": oauth2_handler.client_id,
+            "redirect_uri": oauth2_handler.redirect_uri,
+            "scope": oauth2_handler.scope
+        }
+        
+        # حفظ في قاعدة البيانات
+        if db_manager.save_oauth_state(state, "default_user", json.dumps(handler_data)):
+            print(f"💾 [get_simple_oauth_url] تم حفظ state في قاعدة البيانات: {state}")
             print(f"👤 [get_simple_oauth_url] للمستخدم: default_user")
-            print(f"📊 [get_simple_oauth_url] إجمالي الحالات: {len(self.oauth_states)}")
-            print(f"🔑 [get_simple_oauth_url] الحالات المتاحة: {list(self.oauth_states.keys())}")
             print(f"🔗 [get_simple_oauth_url] رابط المصادقة النهائي: {auth_url}")
+        else:
+            print(f"❌ [get_simple_oauth_url] فشل في حفظ state في قاعدة البيانات")
             
             return auth_url, state
             
@@ -142,18 +146,22 @@ class TwitterOAuthManager:
             print(f"🔗 رابط المصادقة للمستخدم {username}: {redirect_url}")
             print(f"🔑 State: {state}")
             
-            # حفظ الحالة مع اسم المستخدم
-            self.oauth_states[state] = {
-                "username": username,
-                "timestamp": int(time.time()),
-                "oauth2_handler": oauth2_handler
+            # حفظ الحالة مع اسم المستخدم في قاعدة البيانات
+            from .database import db_manager
+            
+            # تحويل oauth2_handler إلى بيانات قابلة للتخزين
+            handler_data = {
+                "client_id": oauth2_handler.client_id,
+                "redirect_uri": oauth2_handler.redirect_uri,
+                "scope": oauth2_handler.scope
             }
             
-            # معلومات تشخيصية
-            print(f"💾 تم حفظ state: {state}")
-            print(f"👤 للمستخدم: {username}")
-            print(f"📊 إجمالي الحالات: {len(self.oauth_states)}")
-            print(f"🔑 الحالات المتاحة: {list(self.oauth_states.keys())}")
+            # حفظ في قاعدة البيانات
+            if db_manager.save_oauth_state(state, username, json.dumps(handler_data)):
+                print(f"💾 [get_authorization_url] تم حفظ state في قاعدة البيانات: {state}")
+                print(f"👤 [get_authorization_url] للمستخدم: {username}")
+            else:
+                print(f"❌ [get_authorization_url] فشل في حفظ state في قاعدة البيانات")
             
             return redirect_url, state
             
@@ -278,28 +286,41 @@ class TwitterOAuthManager:
         Returns:
             Dict: نتيجة المصادقة
         """
-        # التحقق من صحة الحالة - معلومات تشخيصية شاملة
+        # التحقق من صحة الحالة من قاعدة البيانات
         print(f"🔍 [handle_callback] بدء معالجة callback")
         print(f"🔍 [handle_callback] البحث عن state: {state}")
         print(f"🔍 [handle_callback] رمز التفويض: {code}")
-        print(f"📋 [handle_callback] الحالات المتاحة: {list(self.oauth_states.keys())}")
-        print(f"📊 [handle_callback] عدد الحالات: {len(self.oauth_states)}")
         
-        # طباعة تفاصيل كل حالة محفوظة للمقارنة
-        for saved_state, data in self.oauth_states.items():
-            print(f"📋 [handle_callback] حالة محفوظة: '{saved_state}' - مستخدم: {data.get('username', 'غير محدد')}")
-            print(f"📋 [handle_callback] طول State المحفوظ: {len(saved_state)} vs المطلوب: {len(state)}")
-            print(f"📋 [handle_callback] هل متطابق؟ {saved_state == state}")
+        # الحصول على الحالة من قاعدة البيانات
+        from .database import db_manager
+        oauth_state = db_manager.get_oauth_state(state)
         
-        if state not in self.oauth_states:
+        if not oauth_state:
+            print(f"❌ [handle_callback] State غير موجود أو منتهي الصلاحية: {state}")
             return {
                 "success": False,
-                "error": f"حالة OAuth غير صالحة. State: {state}, المتاح: {list(self.oauth_states.keys())}"
+                "error": f"حالة OAuth غير صالحة أو منتهية الصلاحية. State: {state}"
             }
         
-        oauth_data = self.oauth_states[state]
-        username = oauth_data["username"]
-        oauth2_handler = oauth_data.get("oauth2_handler")
+        print(f"✅ [handle_callback] تم العثور على state: {state}")
+        print(f"👤 [handle_callback] المستخدم: {oauth_state.username}")
+        
+        # إعادة إنشاء oauth2_handler من البيانات المحفوظة
+        try:
+            handler_data = json.loads(oauth_state.oauth2_handler_data) if oauth_state.oauth2_handler_data else {}
+            oauth2_handler = OAuth2UserHandler(
+                client_id=handler_data.get("client_id", self.client_id),
+                redirect_uri=handler_data.get("redirect_uri", self.redirect_uri),
+                scope=handler_data.get("scope", self.scopes)
+            )
+        except Exception as e:
+            print(f"❌ [handle_callback] فشل في إعادة إنشاء oauth2_handler: {e}")
+            return {
+                "success": False,
+                "error": f"فشل في إعادة إنشاء OAuth handler: {str(e)}"
+            }
+        
+        username = oauth_state.username
         
         if not oauth2_handler:
             return {
@@ -357,7 +378,7 @@ class TwitterOAuthManager:
             
             if success:
                 # حذف الحالة المؤقتة
-                del self.oauth_states[state]
+                db_manager.delete_oauth_state(state)
                 
                 return {
                     "success": True,
@@ -382,17 +403,9 @@ class TwitterOAuthManager:
     
     def cleanup_expired_states(self):
         """تنظيف الحالات المنتهية الصلاحية"""
-        import time
-        current_time = int(time.time())
-        expired_states = []
-        
-        for state, data in self.oauth_states.items():
-            if isinstance(data, dict) and "timestamp" in data:
-                if current_time - data["timestamp"] > 3600:  # ساعة واحدة
-                    expired_states.append(state)
-        
-        for state in expired_states:
-            del self.oauth_states[state]
+        # يتم تنظيف الحالات المنتهية الصلاحية تلقائياً في قاعدة البيانات
+        # عند حفظ حالة جديدة
+        print("🧹 تم تنظيف الحالات المنتهية الصلاحية من قاعدة البيانات")
 
 # إنشاء نسخة واحدة من مدير المصادقة
 oauth_manager = TwitterOAuthManager()

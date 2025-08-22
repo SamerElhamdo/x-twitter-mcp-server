@@ -16,6 +16,25 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # إنشاء قاعدة النماذج
 Base = declarative_base()
 
+class OAuthState(Base):
+    """نموذج حالة OAuth"""
+    __tablename__ = "oauth_states"
+    
+    state = Column(String, primary_key=True, index=True)
+    username = Column(String, nullable=False)
+    oauth2_handler_data = Column(String, nullable=True)  # JSON string for handler data
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)  # انتهاء الصلاحية بعد 10 دقائق
+    
+    def to_dict(self):
+        """تحويل النموذج إلى قاموس"""
+        return {
+            "state": self.state,
+            "username": self.username,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None
+        }
+
 class TwitterAccount(Base):
     """نموذج حساب Twitter"""
     __tablename__ = "twitter_accounts"
@@ -229,6 +248,57 @@ class DatabaseManager:
         except Exception as e:
             print(f"خطأ في الحصول على الحساب بواسطة User ID: {e}")
             return None
+    
+    def save_oauth_state(self, state: str, username: str, oauth2_handler_data: str = None) -> bool:
+        """حفظ حالة OAuth في قاعدة البيانات"""
+        try:
+            with self.get_session() as session:
+                # حذف الحالات المنتهية الصلاحية
+                from datetime import datetime, timedelta
+                expired_time = datetime.utcnow() - timedelta(minutes=10)
+                session.query(OAuthState).filter(
+                    OAuthState.expires_at < expired_time
+                ).delete()
+                
+                # حفظ الحالة الجديدة
+                oauth_state = OAuthState(
+                    state=state,
+                    username=username,
+                    oauth2_handler_data=oauth2_handler_data,
+                    expires_at=datetime.utcnow() + timedelta(minutes=10)
+                )
+                session.add(oauth_state)
+                session.commit()
+                return True
+        except Exception as e:
+            print(f"خطأ في حفظ حالة OAuth: {e}")
+            return False
+    
+    def get_oauth_state(self, state: str) -> Optional[OAuthState]:
+        """الحصول على حالة OAuth من قاعدة البيانات"""
+        try:
+            with self.get_session() as session:
+                oauth_state = session.query(OAuthState).filter(
+                    OAuthState.state == state,
+                    OAuthState.expires_at > datetime.utcnow()
+                ).first()
+                return oauth_state
+        except Exception as e:
+            print(f"خطأ في الحصول على حالة OAuth: {e}")
+            return None
+    
+    def delete_oauth_state(self, state: str) -> bool:
+        """حذف حالة OAuth من قاعدة البيانات"""
+        try:
+            with self.get_session() as session:
+                session.query(OAuthState).filter(
+                    OAuthState.state == state
+                ).delete()
+                session.commit()
+                return True
+        except Exception as e:
+            print(f"خطأ في حذف حالة OAuth: {e}")
+            return False
     
     def update_tokens(self, username: str, access_token: str, 
                      refresh_token: Optional[str] = None, expires_at: Optional[datetime] = None) -> bool:
