@@ -98,27 +98,24 @@ class TwitterOAuthManager:
                 scope=self.scopes
             )
             
+            # إنشاء state أولاً
+            state = self.generate_oauth_state()
+            print(f"🔑 [get_simple_oauth_url] State المُنشأ: {state}")
+            
             # إنشاء رابط المصادقة مع PKCE
             # OAuth2UserHandler يدعم PKCE تلقائياً
             # Twitter API v2 يتطلب PKCE
-            auth_url = oauth2_handler.get_authorization_url()
+            # تمرير state مخصص إلى get_authorization_url
+            auth_url = oauth2_handler.get_authorization_url(state=state)
             
-            # استخدم state الذي ولّده tweepy
-            # المشكلة: oauth2_handler.state يعيد دالة، نحتاج القيمة الفعلية
-            state = None
+            # استخراج code_verifier من oauth2_handler
             code_verifier = None
             
-            # محاولة استخراج state و code_verifier من oauth2_handler
+            # محاولة استخراج code_verifier من oauth2_handler
             for attr in ["oauth2_session", "_client", "code_verifier"]:
                 try:
                     obj = getattr(oauth2_handler, attr)
                     if obj:
-                        # محاولة الحصول على state
-                        if state is None:
-                            state = getattr(obj, "state", None)
-                            if callable(state):
-                                state = state()  # استدعاء الدالة
-                        
                         # محاولة الحصول على code_verifier
                         if code_verifier is None:
                             code_verifier = getattr(obj, "code_verifier", None)
@@ -127,11 +124,6 @@ class TwitterOAuthManager:
                 except Exception as e:
                     print(f"⚠️  [get_simple_oauth_url] فشل في استخراج {attr}: {e}")
                     continue
-            
-            # إذا لم نجد state، استخدم generate_oauth_state
-            if not state or callable(state):
-                print(f"⚠️  [get_simple_oauth_url] فشل في الحصول على state من Tweepy، استخدام generate_oauth_state")
-                state = self.generate_oauth_state()
             
             if not state:
                 raise ValueError("فشل في إنشاء state")
@@ -213,27 +205,24 @@ class TwitterOAuthManager:
                 scope=self.scopes
             )
             
+            # إنشاء state أولاً
+            state = self.generate_oauth_state()
+            print(f"🔑 [get_authorization_url] State المُنشأ: {state}")
+            
             # إنشاء رابط المصادقة مع PKCE
             # OAuth2UserHandler يدعم PKCE تلقائياً
             # Twitter API v2 يتطلب PKCE
-            redirect_url = oauth2_handler.get_authorization_url()
+            # تمرير state مخصص إلى get_authorization_url
+            redirect_url = oauth2_handler.get_authorization_url(state=state)
             
-            # استخدم state الذي ولّده tweepy
-            # المشكلة: oauth2_handler.state يعيد دالة، نحتاج القيمة الفعلية
-            state = None
+            # استخراج code_verifier من oauth2_handler
             code_verifier = None
             
-            # محاولة استخراج state و code_verifier من oauth2_handler
+            # محاولة استخراج code_verifier من oauth2_handler
             for attr in ["oauth2_session", "_client", "code_verifier"]:
                 try:
                     obj = getattr(oauth2_handler, attr)
                     if obj:
-                        # محاولة الحصول على state
-                        if state is None:
-                            state = getattr(obj, "state", None)
-                            if callable(state):
-                                state = state()  # استدعاء الدالة
-                        
                         # محاولة الحصول على code_verifier
                         if code_verifier is None:
                             code_verifier = getattr(obj, "code_verifier", None)
@@ -242,11 +231,6 @@ class TwitterOAuthManager:
                 except Exception as e:
                     print(f"⚠️  [get_authorization_url] فشل في استخراج {attr}: {e}")
                     continue
-            
-            # إذا لم نجد state، استخدم generate_oauth_state
-            if not state or callable(state):
-                print(f"⚠️  [get_authorization_url] فشل في الحصول على state من Tweepy، استخدام generate_oauth_state")
-                state = self.generate_oauth_state()
             
             if not state:
                 raise ValueError("فشل في إنشاء state")
