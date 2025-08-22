@@ -738,10 +738,11 @@ async def get_oauth_url(username: str = Query(..., description="اسم المس�
 async def get_public_oauth():
     """إنشاء رابط مصادقة OAuth عام للجميع"""
     try:
-        auth_url = oauth_manager.get_public_oauth_url()
+        auth_url, state = oauth_manager.get_public_oauth_url()
         return {
             "success": True,
             "auth_url": auth_url,
+            "state": state,
             "message": "رابط المصادقة العام جاهز"
         }
     except Exception as e:
@@ -772,8 +773,10 @@ async def get_simple_oauth():
 async def redirect_to_twitter():
     """التوجيه المباشر إلى Twitter للمصادقة"""
     try:
-        auth_url = oauth_manager.get_public_oauth_url()
-        return RedirectResponse(url=auth_url)
+        auth_url, state = oauth_manager.get_public_oauth_url()
+        # إضافة state كمعامل query في الرابط
+        redirect_url = f"{auth_url}&state={state}"
+        return RedirectResponse(url=redirect_url)
     except Exception as e:
         return HTMLResponse(content=f"""
         <!DOCTYPE html>

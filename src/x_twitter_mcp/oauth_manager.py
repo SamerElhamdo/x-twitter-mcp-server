@@ -99,15 +99,15 @@ class TwitterOAuthManager:
         except Exception as e:
             raise ValueError(f"خطأ في إنشاء رابط المصادقة: {str(e)}")
     
-    def get_public_oauth_url(self) -> str:
+    def get_public_oauth_url(self) -> Tuple[str, str]:
         """إنشاء رابط OAuth 2.0 عام للجميع
         
         Returns:
-            str: رابط المصادقة العام
+            Tuple[str, str]: (رابط المصادقة، حالة OAuth)
         """
         # استخدام الرابط الصحيح لحل مشكلة redirect_after_login
         auth_url, state = self.get_simple_oauth_url()
-        return auth_url
+        return auth_url, state
     
     def get_authorization_url(self, username: str) -> Tuple[str, str]:
         """إنشاء رابط المصادقة لـ Twitter مع username محدد
