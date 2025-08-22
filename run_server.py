@@ -84,7 +84,7 @@ def main():
     print(f"🔐 صفحة المصادقة: http://{settings.host}:{settings.port}/auth")
     print(f"🗄️  قاعدة البيانات: {settings.database_url}")
     print(f"🔧 البيئة: {settings.environment}")
-    print(f"🐛 وضع التطوير: {'مفعل' if settings.debug else 'معطل'}")
+    print(f"🐛 وضع التطوير: {'مفعل' if getattr(settings, 'debug', True) else 'معطل'}")
     print("="*60)
     print("💡 اضغط Ctrl+C لإيقاف الخادم")
     print("="*60 + "\n")
