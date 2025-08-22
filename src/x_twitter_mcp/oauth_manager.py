@@ -81,23 +81,23 @@ class TwitterOAuthManager:
             print(f"📋 Scopes: {', '.join(self.scopes)}")
             print(f"🔑 State: {state}")
             
-                    # حفظ الحالة في قاعدة البيانات بدلاً من الذاكرة المؤقتة
-        from .database import db_manager
-        
-        # تحويل oauth2_handler إلى بيانات قابلة للتخزين
-        handler_data = {
-            "client_id": oauth2_handler.client_id,
-            "redirect_uri": oauth2_handler.redirect_uri,
-            "scope": oauth2_handler.scope
-        }
-        
-        # حفظ في قاعدة البيانات
-        if db_manager.save_oauth_state(state, "default_user", json.dumps(handler_data)):
-            print(f"💾 [get_simple_oauth_url] تم حفظ state في قاعدة البيانات: {state}")
-            print(f"👤 [get_simple_oauth_url] للمستخدم: default_user")
-            print(f"🔗 [get_simple_oauth_url] رابط المصادقة النهائي: {auth_url}")
-        else:
-            print(f"❌ [get_simple_oauth_url] فشل في حفظ state في قاعدة البيانات")
+            # حفظ الحالة في قاعدة البيانات بدلاً من الذاكرة المؤقتة
+            from .database import db_manager
+            
+            # تحويل oauth2_handler إلى بيانات قابلة للتخزين
+            handler_data = {
+                "client_id": oauth2_handler.client_id,
+                "redirect_uri": oauth2_handler.redirect_uri,
+                "scope": oauth2_handler.scope
+            }
+            
+            # حفظ في قاعدة البيانات
+            if db_manager.save_oauth_state(state, "default_user", json.dumps(handler_data)):
+                print(f"💾 [get_simple_oauth_url] تم حفظ state في قاعدة البيانات: {state}")
+                print(f"👤 [get_simple_oauth_url] للمستخدم: default_user")
+                print(f"🔗 [get_simple_oauth_url] رابط المصادقة النهائي: {auth_url}")
+            else:
+                print(f"❌ [get_simple_oauth_url] فشل في حفظ state في قاعدة البيانات")
             
             return auth_url, state
             
