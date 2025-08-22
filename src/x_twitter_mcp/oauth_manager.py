@@ -48,14 +48,17 @@ class TwitterOAuthManager:
         state = secrets.token_urlsafe(32)
         return state
     
-    def get_simple_oauth_url(self) -> str:
+    def get_simple_oauth_url(self) -> Tuple[str, str]:
         """إنشاء رابط OAuth 2.0 (Authorization Code + PKCE)
         
         Returns:
-            str: رابط المصادقة الصحيح
+            Tuple[str, str]: (رابط المصادقة، حالة OAuth)
         """
         if not self.client_id:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
+        
+        # إنشاء حالة OAuth
+        state = self.generate_oauth_state()
         
         try:
             # استخدام Tweepy OAuth 2.0 مع PKCE
@@ -76,11 +79,22 @@ class TwitterOAuthManager:
             print(f"🆔 Client ID: {self.client_id}")
             print(f"🔄 Redirect URI: {self.redirect_uri}")
             print(f"📋 Scopes: {', '.join(self.scopes)}")
+            print(f"🔑 State: {state}")
             
-            # حفظ handler للاستخدام لاحقاً
-            self.oauth_states['oauth2_handler'] = oauth2_handler
+            # حفظ الحالة مع username افتراضي
+            self.oauth_states[state] = {
+                "username": "default_user",
+                "timestamp": int(time.time()),
+                "oauth2_handler": oauth2_handler
+            }
             
-            return auth_url
+            # معلومات تشخيصية
+            print(f"💾 تم حفظ state: {state}")
+            print(f"👤 للمستخدم: default_user")
+            print(f"📊 إجمالي الحالات: {len(self.oauth_states)}")
+            print(f"🔑 الحالات المتاحة: {list(self.oauth_states.keys())}")
+            
+            return auth_url, state
             
         except Exception as e:
             raise ValueError(f"خطأ في إنشاء رابط المصادقة: {str(e)}")
@@ -92,7 +106,8 @@ class TwitterOAuthManager:
             str: رابط المصادقة العام
         """
         # استخدام الرابط الصحيح لحل مشكلة redirect_after_login
-        return self.get_simple_oauth_url()
+        auth_url, state = self.get_simple_oauth_url()
+        return auth_url
     
     def get_authorization_url(self, username: str) -> Tuple[str, str]:
         """إنشاء رابط المصادقة لـ Twitter مع username محدد

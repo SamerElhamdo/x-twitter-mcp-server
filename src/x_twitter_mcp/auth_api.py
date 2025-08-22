@@ -755,7 +755,7 @@ async def get_public_oauth():
 async def get_simple_oauth():
     """إنشاء رابط مصادقة OAuth بسيط بدون PKCE"""
     try:
-        auth_url = oauth_manager.get_simple_oauth_url()
+        auth_url, state = oauth_manager.get_simple_oauth_url()
         return {
             "success": True,
             "auth_url": auth_url,
