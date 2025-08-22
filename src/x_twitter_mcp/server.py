@@ -33,23 +33,28 @@ def initialize_twitter_clients(username: str) -> tuple[tweepy.Client, tweepy.API
     if not db_manager.test_credentials(username):
         raise ValueError(f"مفاتيح المصادقة للحساب '{username}' غير صحيحة. يرجى تحديثها.")
     
-    # Initialize v2 API client
-    twitter_client = tweepy.Client(
-        consumer_key=account.api_key,
-        consumer_secret=account.api_secret,
-        access_token=account.access_token,
-        access_token_secret=account.access_token_secret,
-        bearer_token=account.bearer_token
-    )
-
-    # Initialize v1.1 API for media uploads and other unsupported v2 endpoints
-    auth = tweepy.OAuth1UserHandler(
-        consumer_key=account.api_key,
-        consumer_secret=account.api_secret,
-        access_token=account.access_token,
-        access_token_secret=account.access_token_secret
-    )
-    twitter_v1_api = tweepy.API(auth)
+    # استخدام oauth_manager لإنشاء العميل
+    from .oauth_manager import oauth_manager
+    
+    # إنشاء عميل v2
+    twitter_client = oauth_manager.create_client_for_user(username)
+    if not twitter_client:
+        raise ValueError(f"فشل في إنشاء عميل Twitter للحساب '{username}'")
+    
+    # إنشاء عميل v1.1 للتوافق (إذا كان الحساب يستخدم OAuth 1.0a)
+    twitter_v1_api = None
+    if account.auth_type == "oauth1":
+        try:
+            auth = tweepy.OAuth1UserHandler(
+                consumer_key=account.api_key,
+                consumer_secret=account.api_secret,
+                access_token=account.access_token,
+                access_token_secret=account.access_token_secret
+            )
+            twitter_v1_api = tweepy.API(auth)
+        except Exception as e:
+            print(f"تحذير: فشل في إنشاء عميل v1.1: {e}")
+            twitter_v1_api = None
 
     return twitter_client, twitter_v1_api
 

@@ -21,15 +21,22 @@ class TwitterAccount(Base):
     __tablename__ = "twitter_accounts"
     
     username = Column(String, primary_key=True, index=True)
-    api_key = Column(String, nullable=False)
-    api_secret = Column(String, nullable=False)
-    access_token = Column(String, nullable=False)
-    access_token_secret = Column(String, nullable=False)
-    bearer_token = Column(String, nullable=False)
+    api_key = Column(String, nullable=False)  # Twitter API Key (Consumer Key)
+    api_secret = Column(String, nullable=False)  # Twitter API Secret (Consumer Secret)
+    access_token = Column(String, nullable=False)  # OAuth 2.0 Access Token
+    access_token_secret = Column(String, nullable=False)  # OAuth 1.0a Access Token Secret (للتوافق)
+    bearer_token = Column(String, nullable=False)  # Bearer Token
     display_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_used = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    
+    # حقول OAuth 2.0 الجديدة
+    user_id = Column(String, nullable=True)  # Twitter User ID
+    refresh_token = Column(String, nullable=True)  # OAuth 2.0 Refresh Token
+    expires_at = Column(DateTime, nullable=True)  # تاريخ انتهاء Access Token
+    scopes = Column(String, nullable=True)  # نطاقات OAuth 2.0 (JSON string)
+    auth_type = Column(String, default="oauth2")  # نوع المصادقة: oauth1 أو oauth2
     
     def to_dict(self):
         """تحويل النموذج إلى قاموس"""
@@ -83,7 +90,9 @@ class DatabaseManager:
     
     def add_account(self, username: str, api_key: str, api_secret: str, 
                    access_token: str, access_token_secret: str, bearer_token: str,
-                   display_name: Optional[str] = None) -> bool:
+                   display_name: Optional[str] = None, user_id: Optional[str] = None,
+                   refresh_token: Optional[str] = None, expires_at: Optional[datetime] = None,
+                   scopes: Optional[str] = None, auth_type: str = "oauth2") -> bool:
         """إضافة حساب Twitter جديد"""
         try:
             with self.get_session() as session:
@@ -100,6 +109,11 @@ class DatabaseManager:
                     existing.access_token_secret = access_token_secret
                     existing.bearer_token = bearer_token
                     existing.display_name = display_name or username
+                    existing.user_id = user_id
+                    existing.refresh_token = refresh_token
+                    existing.expires_at = expires_at
+                    existing.scopes = scopes
+                    existing.auth_type = auth_type
                     existing.last_used = datetime.utcnow()
                     existing.is_active = True
                 else:
@@ -111,7 +125,12 @@ class DatabaseManager:
                         access_token=access_token,
                         access_token_secret=access_token_secret,
                         bearer_token=bearer_token,
-                        display_name=display_name or username
+                        display_name=display_name or username,
+                        user_id=user_id,
+                        refresh_token=refresh_token,
+                        expires_at=expires_at,
+                        scopes=scopes,
+                        auth_type=auth_type
                     )
                     session.add(new_account)
                 
@@ -189,6 +208,49 @@ class DatabaseManager:
                 return False
         except Exception as e:
             print(f"خطأ في إلغاء تفعيل الحساب: {e}")
+            return False
+    
+    def get_by_user_id(self, user_id: str) -> Optional[TwitterAccount]:
+        """الحصول على حساب Twitter بواسطة User ID"""
+        try:
+            with self.get_session() as session:
+                account = session.query(TwitterAccount).filter(
+                    TwitterAccount.user_id == user_id,
+                    TwitterAccount.is_active == True
+                ).first()
+                
+                if account:
+                    # تحديث آخر استخدام
+                    account.last_used = datetime.utcnow()
+                    session.commit()
+                    return account.copy()
+                
+                return None
+        except Exception as e:
+            print(f"خطأ في الحصول على الحساب بواسطة User ID: {e}")
+            return None
+    
+    def update_tokens(self, username: str, access_token: str, 
+                     refresh_token: Optional[str] = None, expires_at: Optional[datetime] = None) -> bool:
+        """تحديث توكنات OAuth 2.0"""
+        try:
+            with self.get_session() as session:
+                account = session.query(TwitterAccount).filter(
+                    TwitterAccount.username == username
+                ).first()
+                
+                if account:
+                    account.access_token = access_token
+                    if refresh_token:
+                        account.refresh_token = refresh_token
+                    if expires_at:
+                        account.expires_at = expires_at
+                    account.last_used = datetime.utcnow()
+                    session.commit()
+                    return True
+                return False
+        except Exception as e:
+            print(f"خطأ في تحديث التوكنات: {e}")
             return False
     
     def test_credentials(self, username: str) -> bool:
