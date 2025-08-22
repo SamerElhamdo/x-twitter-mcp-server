@@ -300,7 +300,15 @@ class TwitterOAuthManager:
         
         try:
             # استخدام OAuth 2.0 handler لإكمال المصادقة
-            token_data = oauth2_handler.fetch_token(code=code)
+            # إنشاء authorization response URL من code و state
+            authorization_response_url = f"{self.redirect_uri}?code={code}&state={state}"
+            
+            # معلومات تشخيصية
+            print(f"🔗 Authorization Response URL: {authorization_response_url}")
+            print(f"🔑 Code: {code}")
+            print(f"🆔 State: {state}")
+            
+            token_data = oauth2_handler.fetch_token(authorization_response_url)
             
             access_token = token_data.get("access_token")
             refresh_token = token_data.get("refresh_token")
