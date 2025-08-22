@@ -1530,12 +1530,12 @@ async def mcp_post_tweet(request: Request):
         if len(text) > 280:
             raise HTTPException(status_code=400, detail="نص التغريدة طويل جداً (الحد الأقصى 280 حرف)")
         
-        # استيراد MCP server
-        from .server import initialize_twitter_clients
-        
+        # استخدام oauth_manager مباشرة
         try:
-            # تهيئة عملاء Twitter
-            client, v1_api = initialize_twitter_clients(username)
+            # الحصول على عميل Twitter
+            client = oauth_manager.create_client_for_user(username)
+            if not client:
+                raise HTTPException(status_code=400, detail="فشل في إنشاء عميل Twitter")
             
             # إنشاء التغريدة
             tweet_data = {"text": text}
