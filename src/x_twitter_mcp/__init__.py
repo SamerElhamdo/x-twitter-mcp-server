@@ -21,7 +21,6 @@ from .oauth_manager import oauth_manager, TwitterOAuth2Manager
 from .twitter_client import twitter_helper, TwitterClientHelper
 from .database import db_manager, DatabaseManager, TwitterAccount
 from .auth_api import auth_app
-from .mcp_server import server as mcp_server
 
 __all__ = [
     "oauth_manager",
@@ -31,6 +30,5 @@ __all__ = [
     "db_manager",
     "DatabaseManager",
     "TwitterAccount",
-    "auth_app",
-    "mcp_server"
+    "auth_app"
 ]
