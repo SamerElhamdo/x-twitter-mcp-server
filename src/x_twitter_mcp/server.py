@@ -414,45 +414,32 @@ async def vote_on_poll(tweet_id: str, choice: str, username: str) -> Dict:
 
 @server.tool(name="favorite_tweet", description="Favorites a tweet")
 async def favorite_tweet(tweet_id: str, username: str) -> Dict:
-    """Favorites a tweet (uses Twitter API v1.1 only)."""
+    """Favorites a tweet.
+
+    Args:
+        tweet_id (str): The ID of the tweet to favorite (like).
+        username (str): Your Twitter username (stored in database)
+    """
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
-
-    # استخدم v1.1 حصراً
-    _, v1_api = initialize_twitter_clients(username)
-    try:
-        status = v1_api.create_favorite(id=int(tweet_id))
-        return {"tweet_id": str(status.id), "liked": True}
-    except tweepy.TweepyException as e:
-        # 139: already favorited
-        api_codes = getattr(e, "api_codes", []) or []
-        if 139 in api_codes:
-            return {"tweet_id": str(tweet_id), "liked": True, "note": "already_liked"}
-        # 144/34: not found (لو احتجت التعامل معها هنا)
-        if any(code in api_codes for code in (144, 34)):
-            return {"tweet_id": str(tweet_id), "liked": False, "note": "not_found"}
-        raise
-
+    client, _ = initialize_twitter_clients(username)
+    result = client.like(tweet_id=tweet_id)
+    return {"tweet_id": tweet_id, "liked": result.data["liked"]}
 
 @server.tool(name="unfavorite_tweet", description="Unfavorites a tweet")
 async def unfavorite_tweet(tweet_id: str, username: str) -> Dict:
-    """Unfavorites a tweet (uses Twitter API v1.1 only)."""
+    """Unfavorites a tweet.
+
+    Args:
+        tweet_id (str): The ID of the tweet to unfavorite (unlike).
+        username (str): Your Twitter username (stored in database)
+    """
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
+    client, _ = initialize_twitter_clients(username)
+    result = client.unlike(tweet_id=tweet_id)
+    return {"tweet_id": tweet_id, "liked": not result.data["liked"]}
 
-    # استخدم v1.1 حصراً
-    _, v1_api = initialize_twitter_clients(username)
-    try:
-        status = v1_api.destroy_favorite(id=int(tweet_id))
-        return {"tweet_id": str(status.id), "liked": False}
-    except tweepy.TweepyException as e:
-        # 144/34: tweet not found | 50/327 حالات أخرى شائعة
-        api_codes = getattr(e, "api_codes", []) or []
-        if any(code in api_codes for code in (144, 34, 50, 327)):
-            return {"tweet_id": str(tweet_id), "liked": False, "note": "already_unliked_or_not_found"}
-        raise
-
-        
 @server.tool(name="bookmark_tweet", description="Adds the tweet to bookmarks")
 async def bookmark_tweet(
     tweet_id: str,
