@@ -1,8 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, Query, Field
+from fastapi import FastAPI, HTTPException, Depends, Request, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import uvicorn
 from .database import db_manager, TwitterAccount
@@ -46,6 +46,35 @@ class TestCredentialsResponse(BaseModel):
 
 class OAuthRequest(BaseModel):
     username: str
+
+# نماذج البيانات لأدوات MCP
+class TweetActionRequest(BaseModel):
+    tweet_id: str = Field(..., description="معرف التغريدة")
+    username: str = Field(..., description="اسم المستخدم المنفذ")
+
+class PostTweetRequest(BaseModel):
+    text: str = Field(..., description="نص التغريدة (حد أقصى 280 حرف)")
+    username: str = Field(..., description="اسم المستخدم المنفذ")
+    reply_to: Optional[str] = Field(None, description="معرف التغريدة للرد عليها")
+
+class SearchTweetsRequest(BaseModel):
+    query: str = Field(..., description="كلمات البحث")
+    username: str = Field(..., description="اسم المستخدم المنفذ")
+    count: int = Field(20, description="عدد التغريدات (10-100)", ge=10, le=100)
+    product: str = Field("Top", description="نوع النتائج (Top أو Latest)")
+
+class GetTweetRequest(BaseModel):
+    tweet_id: str = Field(..., description="معرف التغريدة")
+    username: str = Field(..., description="اسم المستخدم المنفذ")
+
+class GetUserRequest(BaseModel):
+    user_identifier: str = Field(..., description="اسم المستخدم أو المعرف")
+    username: str = Field(..., description="اسم المستخدم المنفذ")
+    by_id: bool = Field(False, description="البحث بالمعرف بدلاً من اسم المستخدم")
+
+class GetTimelineRequest(BaseModel):
+    username: str = Field(..., description="اسم المستخدم المنفذ")
+    count: int = Field(20, description="عدد التغريدات (10-100)", ge=10, le=100)
 
 # الصفحة الرئيسية
 @auth_app.get("/", response_class=HTMLResponse)
@@ -1188,18 +1217,15 @@ def start_auth_server(host: str = "127.0.0.1", port: int = 8000):
 # ==================== MCP TOOLS ENDPOINTS ====================
 
 @auth_app.post("/tools/favorite_tweet", summary="إعجاب بتغريدة")
-async def tool_favorite_tweet(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+async def tool_favorite_tweet(request: TweetActionRequest):
     """إعجاب بتغريدة"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
-        result = client.like(tweet_id=tweet_id, user_auth=False)
+        client, _ = initialize_twitter_clients(request.username)
+        result = client.like(tweet_id=request.tweet_id, user_auth=False)
         return {
             "success": True,
-            "tweet_id": tweet_id,
+            "tweet_id": request.tweet_id,
             "liked": result.data["liked"],
             "message": "تم الإعجاب بالتغريدة بنجاح"
         }
@@ -1207,18 +1233,15 @@ async def tool_favorite_tweet(
         raise HTTPException(status_code=400, detail=f"خطأ في الإعجاب: {str(e)}")
 
 @auth_app.post("/tools/unfavorite_tweet", summary="إلغاء الإعجاب بتغريدة")
-async def tool_unfavorite_tweet(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+async def tool_unfavorite_tweet(request: TweetActionRequest):
     """إلغاء الإعجاب بتغريدة"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
-        result = client.unlike(tweet_id=tweet_id, user_auth=False)
+        client, _ = initialize_twitter_clients(request.username)
+        result = client.unlike(tweet_id=request.tweet_id, user_auth=False)
         return {
             "success": True,
-            "tweet_id": tweet_id,
+            "tweet_id": request.tweet_id,
             "liked": not result.data["liked"],
             "message": "تم إلغاء الإعجاب بالتغريدة بنجاح"
         }
@@ -1226,18 +1249,15 @@ async def tool_unfavorite_tweet(
         raise HTTPException(status_code=400, detail=f"خطأ في إلغاء الإعجاب: {str(e)}")
 
 @auth_app.post("/tools/retweet", summary="إعادة تغريد")
-async def tool_retweet(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+async def tool_retweet(request: TweetActionRequest):
     """إعادة تغريد"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
-        result = client.retweet(tweet_id=tweet_id, user_auth=False)
+        client, _ = initialize_twitter_clients(request.username)
+        result = client.retweet(tweet_id=request.tweet_id, user_auth=False)
         return {
             "success": True,
-            "tweet_id": tweet_id,
+            "tweet_id": request.tweet_id,
             "retweeted": result.data["retweeted"],
             "message": "تم إعادة التغريد بنجاح"
         }
@@ -1245,18 +1265,15 @@ async def tool_retweet(
         raise HTTPException(status_code=400, detail=f"خطأ في إعادة التغريد: {str(e)}")
 
 @auth_app.post("/tools/unretweet", summary="إلغاء إعادة التغريد")
-async def tool_unretweet(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+async def tool_unretweet(request: TweetActionRequest):
     """إلغاء إعادة التغريد"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
-        result = client.unretweet(tweet_id=tweet_id, user_auth=False)
+        client, _ = initialize_twitter_clients(request.username)
+        result = client.unretweet(tweet_id=request.tweet_id, user_auth=False)
         return {
             "success": True,
-            "tweet_id": tweet_id,
+            "tweet_id": request.tweet_id,
             "retweeted": not result.data["retweeted"],
             "message": "تم إلغاء إعادة التغريد بنجاح"
         }
@@ -1264,22 +1281,18 @@ async def tool_unretweet(
         raise HTTPException(status_code=400, detail=f"خطأ في إلغاء إعادة التغريد: {str(e)}")
 
 @auth_app.post("/tools/post_tweet", summary="نشر تغريدة")
-async def tool_post_tweet(
-    text: str = Field(..., description="نص التغريدة (حد أقصى 280 حرف)"),
-    username: str = Field(..., description="اسم المستخدم المنفذ"),
-    reply_to: Optional[str] = Field(None, description="معرف التغريدة للرد عليها")
-):
+async def tool_post_tweet(request: PostTweetRequest):
     """نشر تغريدة جديدة"""
     try:
-        if len(text) > 280:
+        if len(request.text) > 280:
             raise HTTPException(status_code=400, detail="نص التغريدة طويل جداً (الحد الأقصى 280 حرف)")
         
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
+        client, _ = initialize_twitter_clients(request.username)
         
-        tweet_data = {"text": text}
-        if reply_to:
-            tweet_data["in_reply_to_tweet_id"] = reply_to
+        tweet_data = {"text": request.text}
+        if request.reply_to:
+            tweet_data["in_reply_to_tweet_id"] = request.reply_to
             
         tweet = client.create_tweet(user_auth=False, **tweet_data)
         return {
@@ -1292,18 +1305,15 @@ async def tool_post_tweet(
         raise HTTPException(status_code=400, detail=f"خطأ في نشر التغريدة: {str(e)}")
 
 @auth_app.delete("/tools/delete_tweet", summary="حذف تغريدة")
-async def tool_delete_tweet(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+async def tool_delete_tweet(request: TweetActionRequest):
     """حذف تغريدة"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
-        result = client.delete_tweet(id=tweet_id, user_auth=False)
+        client, _ = initialize_twitter_clients(request.username)
+        result = client.delete_tweet(id=request.tweet_id, user_auth=False)
         return {
             "success": True,
-            "tweet_id": tweet_id,
+            "tweet_id": request.tweet_id,
             "deleted": result.data["deleted"],
             "message": "تم حذف التغريدة بنجاح"
         }
@@ -1311,18 +1321,15 @@ async def tool_delete_tweet(
         raise HTTPException(status_code=400, detail=f"خطأ في حذف التغريدة: {str(e)}")
 
 @auth_app.post("/tools/bookmark_tweet", summary="حفظ تغريدة في المفضلة")
-async def tool_bookmark_tweet(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+async def tool_bookmark_tweet(request: TweetActionRequest):
     """حفظ تغريدة في المفضلة"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
-        result = client.bookmark(tweet_id=tweet_id, user_auth=False)
+        client, _ = initialize_twitter_clients(request.username)
+        result = client.bookmark(tweet_id=request.tweet_id, user_auth=False)
         return {
             "success": True,
-            "tweet_id": tweet_id,
+            "tweet_id": request.tweet_id,
             "bookmarked": result.data["bookmarked"],
             "message": "تم حفظ التغريدة في المفضلة بنجاح"
         }
@@ -1330,40 +1337,32 @@ async def tool_bookmark_tweet(
         raise HTTPException(status_code=400, detail=f"خطأ في حفظ التغريدة: {str(e)}")
 
 @auth_app.delete("/tools/remove_bookmark", summary="إزالة تغريدة من المفضلة")
-async def tool_remove_bookmark(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+async def tool_remove_bookmark(request: TweetActionRequest):
     """إزالة تغريدة من المفضلة"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
-        result = client.remove_bookmark(tweet_id=tweet_id, user_auth=False)
+        client, _ = initialize_twitter_clients(request.username)
+        result = client.remove_bookmark(tweet_id=request.tweet_id, user_auth=False)
         return {
             "success": True,
-            "tweet_id": tweet_id,
+            "tweet_id": request.tweet_id,
             "bookmarked": not result.data["bookmarked"],
             "message": "تم إزالة التغريدة من المفضلة بنجاح"
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"خطأ في إزالة التغريدة من المفضلة: {str(e)}")
 
-@auth_app.get("/tools/search_tweets", summary="البحث في التغريدات")
-async def tool_search_tweets(
-    query: str = Field(..., description="كلمات البحث"),
-    username: str = Field(..., description="اسم المستخدم المنفذ"),
-    count: int = Field(20, description="عدد التغريدات (10-100)", ge=10, le=100),
-    product: str = Field("Top", description="نوع النتائج (Top أو Latest)")
-):
+@auth_app.post("/tools/search_tweets", summary="البحث في التغريدات")
+async def tool_search_tweets(request: SearchTweetsRequest):
     """البحث في التغريدات"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
+        client, _ = initialize_twitter_clients(request.username)
         
-        sort_order = "relevancy" if product == "Top" else "recency"
+        sort_order = "relevancy" if request.product == "Top" else "recency"
         tweets = client.search_recent_tweets(
-            query=query, 
-            max_results=count, 
+            query=request.query, 
+            max_results=request.count, 
             sort_order=sort_order, 
             tweet_fields=["id", "text", "created_at"]
         )
@@ -1371,7 +1370,7 @@ async def tool_search_tweets(
         results = [tweet.data for tweet in tweets.data] if tweets.data else []
         return {
             "success": True,
-            "query": query,
+            "query": request.query,
             "count": len(results),
             "tweets": results,
             "message": f"تم العثور على {len(results)} تغريدة"
@@ -1379,17 +1378,14 @@ async def tool_search_tweets(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"خطأ في البحث: {str(e)}")
 
-@auth_app.get("/tools/get_tweet", summary="الحصول على تفاصيل تغريدة")
-async def tool_get_tweet(
-    tweet_id: str = Field(..., description="معرف التغريدة"),
-    username: str = Field(..., description="اسم المستخدم المنفذ")
-):
+@auth_app.post("/tools/get_tweet", summary="الحصول على تفاصيل تغريدة")
+async def tool_get_tweet(request: GetTweetRequest):
     """الحصول على تفاصيل تغريدة"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
+        client, _ = initialize_twitter_clients(request.username)
         tweet = client.get_tweet(
-            id=tweet_id, 
+            id=request.tweet_id, 
             tweet_fields=["id", "text", "created_at", "author_id"]
         )
         return {
@@ -1400,25 +1396,21 @@ async def tool_get_tweet(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"خطأ في الحصول على التغريدة: {str(e)}")
 
-@auth_app.get("/tools/get_user", summary="الحصول على معلومات مستخدم")
-async def tool_get_user(
-    user_identifier: str = Field(..., description="اسم المستخدم أو المعرف"),
-    username: str = Field(..., description="اسم المستخدم المنفذ"),
-    by_id: bool = Field(False, description="البحث بالمعرف بدلاً من اسم المستخدم")
-):
+@auth_app.post("/tools/get_user", summary="الحصول على معلومات مستخدم")
+async def tool_get_user(request: GetUserRequest):
     """الحصول على معلومات مستخدم"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
+        client, _ = initialize_twitter_clients(request.username)
         
-        if by_id:
+        if request.by_id:
             user = client.get_user(
-                id=user_identifier, 
+                id=request.user_identifier, 
                 user_fields=["id", "name", "username", "profile_image_url", "description"]
             )
         else:
             user = client.get_user(
-                username=user_identifier, 
+                username=request.user_identifier, 
                 user_fields=["id", "name", "username", "profile_image_url", "description"]
             )
         
@@ -1430,15 +1422,12 @@ async def tool_get_user(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"خطأ في الحصول على معلومات المستخدم: {str(e)}")
 
-@auth_app.get("/tools/get_timeline", summary="الحصول على التايم لاين")
-async def tool_get_timeline(
-    username: str = Field(..., description="اسم المستخدم المنفذ"),
-    count: int = Field(20, description="عدد التغريدات (10-100)", ge=10, le=100)
-):
+@auth_app.post("/tools/get_timeline", summary="الحصول على التايم لاين")
+async def tool_get_timeline(request: GetTimelineRequest):
     """الحصول على التايم لاين الرئيسي"""
     try:
         from .server import initialize_twitter_clients
-        client, _ = initialize_twitter_clients(username)
+        client, _ = initialize_twitter_clients(request.username)
         
         # الحصول على المستخدم الحالي
         me = client.get_me(user_auth=False).data
@@ -1458,7 +1447,7 @@ async def tool_get_timeline(
         
         tweets = client.search_recent_tweets(
             query=query,
-            max_results=count,
+            max_results=request.count,
             sort_order="recency",
             tweet_fields=["id", "text", "created_at", "author_id"]
         )
