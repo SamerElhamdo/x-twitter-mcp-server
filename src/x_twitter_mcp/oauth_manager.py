@@ -280,7 +280,8 @@ class TwitterOAuthManager:
             
             print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم...")
             try:
-                user_info = client.get_me(user_auth=True).data
+                # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
+                user_info = client.get_me().data
                 print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح")
             except Exception as user_error:
                 print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم: {str(user_error)}")
@@ -388,7 +389,8 @@ class TwitterOAuthManager:
             
             print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم في handle_callback...")
             try:
-                user_info = client.get_me(user_auth=True).data
+                # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
+                user_info = client.get_me().data
                 print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح في handle_callback")
             except Exception as user_error:
                 print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم في handle_callback: {str(user_error)}")
@@ -458,7 +460,8 @@ class TwitterOAuthManager:
             if not client:
                 return None
             
-            user_info = client.get_me(user_auth=True).data
+            # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
+            user_info = client.get_me().data
             return {
                 "id": getattr(user_info, 'id', ''),
                 "username": getattr(user_info, 'username', ''),

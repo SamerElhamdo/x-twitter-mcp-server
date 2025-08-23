@@ -1083,7 +1083,8 @@ async def quick_test_account(username: str):
             client, _ = initialize_twitter_clients(username)
             
             # محاولة الحصول على معلومات المستخدم
-            me = client.get_me(user_auth=True)
+            # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
+            me = client.get_me()
             
             if me.data:
                 return {
