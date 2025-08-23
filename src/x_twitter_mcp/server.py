@@ -21,6 +21,16 @@ server = FastMCP(name="TwitterMCPServer")
 # بدء تشغيل خادم المصادقة
 auth_server_thread = start_auth_server(host="127.0.0.1", port=8000)
 
+def assert_user_context(client: tweepy.Client):
+    """التحقق من صحة OAuth 2.0 User Context قبل العمليات الحساسة."""
+    try:
+        # مع OAuth 2.0 PKCE، نستخدم user_auth=False
+        client.get_me(user_auth=False)
+    except Exception as e:
+        raise RuntimeError(
+            "❌ لا يوجد OAuth2 User Context صالح. أعد التفويض وتأكد من السكوبات وأن التوكن صادر من App داخل Project."
+        ) from e
+
 def initialize_twitter_clients(username: str) -> tuple[tweepy.Client, Optional[tweepy.API]]:
     """Initialize Twitter API clients using OAuth 2.0."""
     
@@ -400,6 +410,7 @@ async def favorite_tweet(tweet_id: str, username: str) -> Dict:
         raise Exception("Like action rate limit exceeded")
     
     client, _ = initialize_twitter_clients(username)
+    # مع OAuth 2.0 PKCE، نستخدم user_auth=False
     try:
         result = client.like(tweet_id=tweet_id, user_auth=False)
         return {
@@ -653,7 +664,7 @@ async def get_timeline(
     client, _ = initialize_twitter_clients(username)
     # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
     # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ bearer_token)
-    me = client.get_me(user_auth=False).data
+            me = client.get_me(user_auth=False).data
     # اجلب أوّل N من الذين تتابعهم (قلّل العدد لضبط طول الاستعلام)
     following = client.get_users_following(id=me.id, max_results=50, user_fields=["id"])
     if not following.data:
@@ -681,7 +692,7 @@ async def get_latest_timeline(
     client, _ = initialize_twitter_clients(username)
     # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
     # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ bearer_token)
-    me = client.get_me(user_auth=False).data
+            me = client.get_me(user_auth=False).data
     following = client.get_users_following(id=me.id, max_results=50, user_fields=["id"])
     if not following.data:
         return []
