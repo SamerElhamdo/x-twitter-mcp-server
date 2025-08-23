@@ -20,14 +20,10 @@ auth_app = FastAPI(title="Twitter Authentication API", version="1.0.0")
 # إعداد القوالب (اختياري)
 templates = Jinja2Templates(directory="templates") if os.path.exists("templates") else None
 
-# نماذج البيانات
+# نماذج البيانات OAuth 2.0
 class AccountCreate(BaseModel):
     username: str
-    api_key: str
-    api_secret: str
     access_token: str
-    access_token_secret: str
-    bearer_token: str
     refresh_token: Optional[str] = None
     display_name: Optional[str] = None
 
@@ -39,11 +35,7 @@ class AccountResponse(BaseModel):
     is_active: bool
 
 class AccountUpdate(BaseModel):
-    api_key: Optional[str] = None
-    api_secret: Optional[str] = None
     access_token: Optional[str] = None
-    access_token_secret: Optional[str] = None
-    bearer_token: Optional[str] = None
     refresh_token: Optional[str] = None
     display_name: Optional[str] = None
 
@@ -894,11 +886,7 @@ async def create_account(account: AccountCreate):
     try:
         success = db_manager.add_account(
             username=account.username,
-            api_key=account.api_key,
-            api_secret=account.api_secret,
             access_token=account.access_token,
-            access_token_secret=account.access_token_secret,
-            bearer_token=account.bearer_token,
             refresh_token=account.refresh_token,
             display_name=account.display_name
         )
@@ -950,16 +938,8 @@ async def update_account(username: str, update_data: AccountUpdate):
             raise HTTPException(status_code=404, detail="الحساب غير موجود")
         
         # تحديث الحقول المطلوبة
-        if update_data.api_key is not None:
-            current_account.api_key = update_data.api_key
-        if update_data.api_secret is not None:
-            current_account.api_secret = update_data.api_secret
         if update_data.access_token is not None:
             current_account.access_token = update_data.access_token
-        if update_data.access_token_secret is not None:
-            current_account.access_token_secret = update_data.access_token_secret
-        if update_data.bearer_token is not None:
-            current_account.bearer_token = update_data.bearer_token
         if update_data.refresh_token is not None:
             current_account.refresh_token = update_data.refresh_token
         if update_data.display_name is not None:
@@ -1056,425 +1036,14 @@ async def get_server_info():
         }
     }
 
-# نقطة نهاية خاصة بـ n8n
-@auth_app.get("/n8n/tools")
-async def get_n8n_tools():
-    """نقطة نهاية خاصة بـ n8n لجلب الأدوات"""
-    
-    # تنسيق متوافق مع n8n
-    return [
-        {
-            "name": "add_twitter_account",
-            "displayName": "إضافة حساب Twitter",
-            "description": "إضافة حساب Twitter جديد",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            }
-        },
-        {
-            "name": "list_twitter_accounts", 
-            "displayName": "عرض الحسابات",
-            "description": "عرض جميع الحسابات المرتبطة",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
-        },
-        {
-            "name": "test_twitter_account",
-            "displayName": "اختبار الحساب",
-            "description": "اختبار صحة حساب Twitter",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            }
-        },
-        {
-            "name": "delete_twitter_account",
-            "displayName": "حذف الحساب",
-            "description": "حذف حساب Twitter",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            }
-        },
-        {
-            "name": "get_help",
-            "displayName": "المساعدة",
-            "description": "عرض قائمة الأوامر المتاحة",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
-        }
-    ]
-
-# نقطة نهاية بديلة لـ n8n
-@auth_app.get("/n8n/tools-alt")
-async def get_n8n_tools_alt():
-    """نقطة نهاية بديلة لـ n8n"""
-    
-    return {
-        "status": "success",
-        "data": [
-            {
-                "name": "add_twitter_account",
-                "displayName": "إضافة حساب Twitter",
-                "description": "إضافة حساب Twitter جديد",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "username": {
-                            "type": "string",
-                            "title": "اسم المستخدم",
-                            "description": "اسم المستخدم بدون @"
-                        }
-                    },
-                    "required": ["username"]
-                }
-            },
-            {
-                "name": "list_twitter_accounts", 
-                "displayName": "عرض الحسابات",
-                "description": "عرض جميع الحسابات المرتبطة",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            },
-            {
-                "name": "test_twitter_account",
-                "displayName": "اختبار الحساب",
-                "description": "اختبار صحة حساب Twitter",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "username": {
-                            "type": "string",
-                            "title": "اسم المستخدم",
-                            "description": "اسم المستخدم بدون @"
-                        }
-                    },
-                    "required": ["username"]
-                }
-            },
-            {
-                "name": "delete_twitter_account",
-                "displayName": "حذف الحساب",
-                "description": "حذف حساب Twitter",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "username": {
-                            "type": "string",
-                            "title": "اسم المستخدم",
-                            "description": "اسم المستخدم بدون @"
-                        }
-                    },
-                    "required": ["username"]
-                }
-            },
-            {
-                "name": "get_help",
-                "displayName": "المساعدة",
-                "description": "عرض قائمة الأوامر المتاحة",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            }
-        ]
-    }
-
-# نقطة نهاية بسيطة جداً لـ n8n
-@auth_app.get("/n8n/simple")
-async def get_n8n_simple():
-    """نقطة نهاية بسيطة جداً لـ n8n"""
-    
-    return [
-        {
-            "name": "add_account",
-            "description": "إضافة حساب Twitter"
-        },
-        {
-            "name": "list_accounts",
-            "description": "عرض الحسابات"
-        },
-        {
-            "name": "test_account",
-            "description": "اختبار الحساب"
-        },
-        {
-            "name": "delete_account",
-            "description": "حذف الحساب"
-        },
-        {
-            "name": "help",
-            "description": "المساعدة"
-        }
-    ]
-
-# نقطة نهاية متوافقة تماماً مع n8n
-@auth_app.get("/n8n/tools-compatible")
-async def get_n8n_tools_compatible():
-    """نقطة نهاية متوافقة تماماً مع n8n"""
-    
-    return [
-        {
-            "name": "add_twitter_account",
-            "displayName": "إضافة حساب Twitter",
-            "description": "إضافة حساب Twitter جديد",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "execute": {
-                "type": "function",
-                "function": {
-                    "name": "add_twitter_account",
-                    "description": "إضافة حساب Twitter جديد",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "username": {
-                                "type": "string",
-                                "description": "اسم المستخدم بدون @"
-                            }
-                        },
-                        "required": ["username"]
-                    }
-                }
-            }
-        },
-        {
-            "name": "list_twitter_accounts", 
-            "displayName": "عرض الحسابات",
-            "description": "عرض جميع الحسابات المرتبطة",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            },
-            "execute": {
-                "type": "function",
-                "function": {
-                    "name": "list_twitter_accounts",
-                    "description": "عرض جميع الحسابات المرتبطة",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            }
-        },
-        {
-            "name": "test_twitter_account",
-            "displayName": "اختبار الحساب",
-            "description": "اختبار صحة حساب Twitter",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "execute": {
-                "type": "function",
-                "function": {
-                    "name": "test_twitter_account",
-                    "description": "اختبار صحة حساب Twitter",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "username": {
-                                "type": "string",
-                                "description": "اسم المستخدم بدون @"
-                            }
-                        },
-                        "required": ["username"]
-                    }
-                }
-            }
-        },
-        {
-            "name": "delete_twitter_account",
-            "displayName": "حذف الحساب",
-            "description": "حذف حساب Twitter",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "execute": {
-                "type": "function",
-                "function": {
-                    "name": "delete_twitter_account",
-                    "description": "حذف حساب Twitter",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "username": {
-                                "type": "string",
-                                "title": "اسم المستخدم",
-                                "description": "اسم المستخدم بدون @"
-                            }
-                        },
-                        "required": ["username"]
-                    }
-                }
-            }
-        },
-        {
-            "name": "get_help",
-            "displayName": "المساعدة",
-            "description": "عرض قائمة الأوامر المتاحة",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            },
-            "execute": {
-                "type": "function",
-                "function": {
-                    "name": "get_help",
-                    "description": "عرض قائمة الأوامر المتاحة",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            }
-        }
-    ]
-
-# نقطة نهاية سريعة للأدوات (بدون تحقق)
+# نقطة نهاية للأدوات
 @auth_app.get("/tools")
-async def get_tools_fast():
-    """نقطة نهاية سريعة لجلب الأدوات بدون تحقق"""
-    
-    tools = [
-        {
-            "name": "add_twitter_account",
-            "description": "إضافة حساب Twitter جديد",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "example": "أضف حساب @username"
-        },
-        {
-            "name": "list_twitter_accounts", 
-            "description": "عرض جميع الحسابات المرتبطة",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            },
-            "example": "عرض الحسابات"
-        },
-        {
-            "name": "test_twitter_account",
-            "description": "اختبار صحة حساب Twitter",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "example": "اختبر @username"
-        },
-        {
-            "name": "delete_twitter_account",
-            "description": "حذف حساب Twitter",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "username": {
-                        "type": "string",
-                        "title": "اسم المستخدم",
-                        "description": "اسم المستخدم بدون @"
-                    }
-                },
-                "required": ["username"]
-            },
-            "example": "احذف @username"
-        },
-        {
-            "name": "get_help",
-            "description": "عرض قائمة الأوامر المتاحة",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            },
-            "example": "مساعدة"
-        }
-    ]
-    
+async def get_tools():
+    """نقطة نهاية للأدوات المتاحة"""
     return {
-        "success": True,
-        "tools": tools,
-        "count": len(tools),
-        "timestamp": time.time(),
-        "version": "1.0.0",
-        "description": "Twitter MCP Server Tools for AI Agent"
+        "tools": ["add_twitter_account", "list_twitter_accounts", "test_twitter_account", "delete_twitter_account"],
+        "oauth2_only": True,
+        "version": "2.0.0"
     }
 
 # نقطة نهاية لاختبار الحساب (اختبار سريع)

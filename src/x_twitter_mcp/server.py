@@ -65,37 +65,25 @@ def check_rate_limit(action_type: str) -> bool:
     return True
 
 # Account Management Tools
-@server.tool(name="add_twitter_account", description="Add a new Twitter account to the database")
+@server.tool(name="add_twitter_account", description="Add a new Twitter account (OAuth 2.0)")
 async def add_twitter_account(
     username: str,
-    api_key: str,
-    api_secret: str,
     access_token: str,
-    access_token_secret: str,
-    bearer_token: str,
     refresh_token: Optional[str] = None,
     display_name: Optional[str] = None
 ) -> Dict:
-    """Add a new Twitter account to the database for future use.
+    """Add a new Twitter account using OAuth 2.0 tokens.
 
     Args:
         username (str): Twitter username (without @)
-        api_key (str): Twitter API Key
-        api_secret (str): Twitter API Secret
-        access_token (str): Twitter Access Token
-        access_token_secret (str): Twitter Access Token Secret
-        bearer_token (str): Twitter Bearer Token
+        access_token (str): OAuth 2.0 Access Token (Bearer Token)
         refresh_token (Optional[str]): OAuth 2.0 Refresh Token
         display_name (Optional[str]): Display name for the account
     """
     try:
         success = db_manager.add_account(
             username=username,
-            api_key=api_key,
-            api_secret=api_secret,
             access_token=access_token,
-            access_token_secret=access_token_secret,
-            bearer_token=bearer_token,
             refresh_token=refresh_token,
             display_name=display_name
         )
@@ -506,39 +494,59 @@ async def unretweet(tweet_id: str, username: str) -> Dict:
     return {"tweet_id": tweet_id, "retweeted": not result.data["retweeted"]}
 
 # Timeline & Search Tools
-@server.tool(name="get_timeline", description="Get tweets from your home timeline (For You)")
+@server.tool(name="get_timeline", description="Get tweets from your home timeline (approx via v2)")
 async def get_timeline(
     username: str,
     count: Optional[int] = 100,
     seen_tweet_ids: Optional[List[str]] = None,
     cursor: Optional[str] = None
 ) -> List[Dict]:
-    """Fetches home timeline tweets (typically 'For You' or algorithmically sorted).
-
-    Args:
-        username (str): Your Twitter username (stored in database)
-        count (Optional[int]): Number of tweets to retrieve. Default 100. Min 5, Max 100 for get_home_timeline.
-        seen_tweet_ids (Optional[List[str]]): List of tweet IDs already seen by the user, to potentially influence timeline results. (Note: Tweepy's get_home_timeline doesn't directly support this, this arg is for future use or custom logic).
-        cursor (Optional[str]): Pagination token for fetching the next set of results.
+    """Approximate home timeline using v2 only:
+    - Get me -> following list
+    - Build OR query: from:user1 OR from:user2 ...
+    - search_recent_tweets(sort_order='recency')
     """
     client, _ = initialize_twitter_clients(username)
-    tweets = client.get_home_timeline(max_results=count, pagination_token=cursor, tweet_fields=["id", "text", "created_at"])
-    return [tweet.data for tweet in tweets.data]
+    me = client.get_me(user_auth=True).data
+    # اجلب أوّل N من الذين تتابعهم (قلّل العدد لضبط طول الاستعلام)
+    following = client.get_users_following(id=me.id, max_results=50, user_fields=["id"])
+    if not following.data:
+        return []
+    # خُذ حتى 12 حساباً لبناء استعلام قصير
+    author_ids = [u.id for u in following.data][:12]
+    query = " OR ".join([f"from:{aid}" for aid in author_ids])
+    # حدود v2: 10..100
+    effective_count = 100 if (count is None or count > 100) else (10 if count < 10 else count)
+    tweets = client.search_recent_tweets(
+        query=query,
+        max_results=effective_count,
+        sort_order="recency",
+        next_token=cursor,
+        tweet_fields=["id", "text", "created_at","author_id"]
+    )
+    return [] if not tweets.data else [t.data for t in tweets.data]
 
-@server.tool(name="get_latest_timeline", description="Get tweets from your home timeline (Following)")
+@server.tool(name="get_latest_timeline", description="Get tweets from your following (approx via v2)")
 async def get_latest_timeline(
     username: str,
     count: Optional[int] = 100
 ) -> List[Dict]:
-    """Fetches latest timeline tweets (reverse chronological order from accounts the user follows).
-
-    Args:
-        username (str): Your Twitter username (stored in database)
-        count (Optional[int]): Number of tweets to retrieve. Default 100. Min 5, Max 100 for get_home_timeline.
-    """
+    """Approx Following timeline using v2 only (reverse–ish via search_recent_tweets)."""
     client, _ = initialize_twitter_clients(username)
-    tweets = client.get_home_timeline(max_results=count, tweet_fields=["id", "text", "created_at"], exclude=["replies", "retweets"])
-    return [tweet.data for tweet in tweets.data]
+    me = client.get_me(user_auth=True).data
+    following = client.get_users_following(id=me.id, max_results=50, user_fields=["id"])
+    if not following.data:
+        return []
+    author_ids = [u.id for u in following.data][:12]
+    query = " OR ".join([f"from:{aid}" for aid in author_ids])
+    effective_count = 100 if (count is None or count > 100) else (10 if count < 10 else count)
+    tweets = client.search_recent_tweets(
+        query=query,
+        max_results=effective_count,
+        sort_order="recency",
+        tweet_fields=["id","text","created_at","author_id"]
+    )
+    return [] if not tweets.data else [t.data for t in tweets.data]
 
 @server.tool(name="search_twitter", description="Search Twitter with a query")
 async def search_twitter(

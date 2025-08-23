@@ -17,20 +17,24 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 class TwitterAccount(Base):
-    """نموذج حساب Twitter"""
+    """نموذج حساب Twitter - OAuth 2.0 فقط"""
     __tablename__ = "twitter_accounts"
     
     username = Column(String, primary_key=True, index=True)
-    api_key = Column(String, nullable=False)
-    api_secret = Column(String, nullable=False)
-    access_token = Column(String, nullable=False)
-    access_token_secret = Column(String, nullable=False)
-    bearer_token = Column(String, nullable=False)
-    refresh_token = Column(String, nullable=True)  # OAuth 2.0 refresh token
+    # OAuth 2.0 tokens فقط
+    access_token = Column(String, nullable=False)  # Bearer token
+    refresh_token = Column(String, nullable=True)
+    # معلومات إضافية
     display_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_used = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    
+    # حقول OAuth 1.0a - للتوافق مع قاعدة البيانات الموجودة (ستكون فارغة)
+    api_key = Column(String, nullable=True, default="")
+    api_secret = Column(String, nullable=True, default="")
+    access_token_secret = Column(String, nullable=True, default="")
+    bearer_token = Column(String, nullable=True)  # نسخة من access_token
     
     def to_dict(self):
         """تحويل النموذج إلى قاموس"""
@@ -43,13 +47,9 @@ class TwitterAccount(Base):
         }
     
     def get_credentials(self):
-        """الحصول على مفاتيح المصادقة (بدون عرضها)"""
+        """الحصول على OAuth 2.0 tokens"""
         return {
-            "api_key": self.api_key,
-            "api_secret": self.api_secret,
             "access_token": self.access_token,
-            "access_token_secret": self.access_token_secret,
-            "bearer_token": self.bearer_token,
             "refresh_token": self.refresh_token
         }
     
@@ -57,16 +57,17 @@ class TwitterAccount(Base):
         """إنشاء نسخة نظيفة من الكائن"""
         return TwitterAccount(
             username=self.username,
-            api_key=self.api_key,
-            api_secret=self.api_secret,
             access_token=self.access_token,
-            access_token_secret=self.access_token_secret,
-            bearer_token=self.bearer_token,
             refresh_token=self.refresh_token,
             display_name=self.display_name,
             created_at=self.created_at,
             last_used=self.last_used,
-            is_active=self.is_active
+            is_active=self.is_active,
+            # حقول التوافق
+            api_key="",
+            api_secret="",
+            access_token_secret="",
+            bearer_token=self.access_token
         )
 
 class DatabaseManager:
@@ -84,9 +85,11 @@ class DatabaseManager:
         """الحصول على جلسة قاعدة البيانات"""
         return self.SessionLocal()
     
-    def add_account(self, username: str, api_key: str, api_secret: str, 
-                   access_token: str, access_token_secret: str, bearer_token: str,
-                   display_name: Optional[str] = None, refresh_token: Optional[str] = None) -> bool:
+    def add_account(self, username: str, access_token: str, refresh_token: Optional[str] = None,
+                   display_name: Optional[str] = None, 
+                   # حقول OAuth 1.0a للتوافق (ستُتجاهل)
+                   api_key: str = "", api_secret: str = "", 
+                   access_token_secret: str = "", bearer_token: str = "") -> bool:
         """إضافة حساب Twitter جديد"""
         try:
             with self.get_session() as session:
@@ -97,26 +100,28 @@ class DatabaseManager:
                 
                 if existing:
                     # تحديث الحساب الموجود
-                    existing.api_key = api_key
-                    existing.api_secret = api_secret
                     existing.access_token = access_token
-                    existing.access_token_secret = access_token_secret
-                    existing.bearer_token = bearer_token
                     existing.refresh_token = refresh_token
                     existing.display_name = display_name or username
                     existing.last_used = datetime.utcnow()
                     existing.is_active = True
+                    # حقول التوافق
+                    existing.api_key = ""
+                    existing.api_secret = ""
+                    existing.access_token_secret = ""
+                    existing.bearer_token = access_token
                 else:
                     # إنشاء حساب جديد
                     new_account = TwitterAccount(
                         username=username,
-                        api_key=api_key,
-                        api_secret=api_secret,
                         access_token=access_token,
-                        access_token_secret=access_token_secret,
-                        bearer_token=bearer_token,
                         refresh_token=refresh_token,
-                        display_name=display_name or username
+                        display_name=display_name or username,
+                        # حقول التوافق
+                        api_key="",
+                        api_secret="",
+                        access_token_secret="",
+                        bearer_token=access_token
                     )
                     session.add(new_account)
                 
