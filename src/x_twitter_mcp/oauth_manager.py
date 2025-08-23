@@ -128,8 +128,7 @@ class TwitterOAuthManager:
         
         # إنشاء Client مع OAuth 2.0 User Access Token
         try:
-            # استخدام access_token كـ OAuth 2.0 user token (وليس bearer_token)
-            return tweepy.Client(access_token=access_token)
+            return tweepy.Client(bearer_token=access_token)
         except Exception as e:
             raise ValueError(f"فشل في إنشاء Twitter client للحساب {username}: {str(e)}")
     
@@ -267,32 +266,13 @@ class TwitterOAuthManager:
             if not access_token:
                 return {"success": False, "error": "Access token فارغ من Twitter"}
             
-            print(f"🔍 DEBUG: محاولة إنشاء tweepy.Client...")
-            print(f"🔍 DEBUG: المعاملات - bearer_token: {access_token[:10]}...")
-            try:
-                print(f"🔍 DEBUG: استدعاء tweepy.Client()...")
-                client = tweepy.Client(
-                    bearer_token=access_token,
-                    consumer_key=None,
-                    consumer_secret=None,
-                    access_token=None,
-                    access_token_secret=None
-                )
-                print(f"🔍 DEBUG: تم إنشاء Client بنجاح، نوع: {type(client)}")
-                print(f"🔍 DEBUG: خصائص Client: bearer_token={hasattr(client, 'bearer_token')}")
-            except Exception as client_error:
-                print(f"❌ DEBUG: خطأ في إنشاء Client: {str(client_error)}")
-                import traceback
-                print(f"❌ DEBUG: تفاصيل خطأ إنشاء Client:\n{traceback.format_exc()}")
-                return {"success": False, "error": f"خطأ في إنشاء Twitter Client: {str(client_error)}"}
-            
             print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم...")
             try:
                 # استخدام OAuth 2.0 User Access Token
                 print(f"🔍 DEBUG: استدعاء client.get_me() مع OAuth 2.0 User Token...")
-                # إنشاء client جديد مع OAuth 2.0 user access token
-                user_client = tweepy.Client(access_token=access_token)
-                me_response = user_client.get_me()
+                # إنشاء client مع OAuth 2.0 user access token
+                user_client = tweepy.Client(bearer_token=access_token)
+                me_response = user_client.get_me(user_auth=False)
                 print(f"🔍 DEBUG: تم استدعاء client.get_me() بنجاح، نوع الاستجابة: {type(me_response)}")
                 
                 print(f"🔍 DEBUG: محاولة الوصول لـ .data...")
@@ -408,8 +388,8 @@ class TwitterOAuthManager:
             print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم في handle_callback...")
             try:
                 # استخدام OAuth 2.0 User Access Token
-                user_client = tweepy.Client(access_token=tokens["access_token"])
-                user_info = user_client.get_me().data
+                user_client = tweepy.Client(bearer_token=tokens["access_token"])
+                user_info = user_client.get_me(user_auth=False).data
                 print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح في handle_callback")
             except Exception as user_error:
                 print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم في handle_callback: {str(user_error)}")
@@ -479,8 +459,8 @@ class TwitterOAuthManager:
             if not client:
                 return None
             
-            # استخدام OAuth 2.0 User Access Token (client مُنشأ بالفعل بـ access_token)
-            user_info = client.get_me().data
+            # استخدام OAuth 2.0 User Access Token (client مُنشأ بالفعل بـ bearer_token)
+            user_info = client.get_me(user_auth=False).data
             return {
                 "id": getattr(user_info, 'id', ''),
                 "username": getattr(user_info, 'username', ''),

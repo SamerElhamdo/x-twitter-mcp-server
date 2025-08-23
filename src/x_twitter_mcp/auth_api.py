@@ -1084,8 +1084,8 @@ async def quick_test_account(username: str):
             
             # محاولة الحصول على معلومات المستخدم
             # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
-            # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ access_token)
-            me = client.get_me()
+            # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ bearer_token)
+            me = client.get_me(user_auth=False)
             
             if me.data:
                 return {

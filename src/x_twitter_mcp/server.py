@@ -508,8 +508,8 @@ async def get_timeline(
     """
     client, _ = initialize_twitter_clients(username)
     # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
-    # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ access_token)
-    me = client.get_me().data
+    # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ bearer_token)
+    me = client.get_me(user_auth=False).data
     # اجلب أوّل N من الذين تتابعهم (قلّل العدد لضبط طول الاستعلام)
     following = client.get_users_following(id=me.id, max_results=50, user_fields=["id"])
     if not following.data:
@@ -536,8 +536,8 @@ async def get_latest_timeline(
     """Approx Following timeline using v2 only (reverse–ish via search_recent_tweets)."""
     client, _ = initialize_twitter_clients(username)
     # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
-    # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ access_token)
-    me = client.get_me().data
+    # استخدام OAuth 2.0 User Access Token (client مُنشأ بـ bearer_token)
+    me = client.get_me(user_auth=False).data
     following = client.get_users_following(id=me.id, max_results=50, user_fields=["id"])
     if not following.data:
         return []
