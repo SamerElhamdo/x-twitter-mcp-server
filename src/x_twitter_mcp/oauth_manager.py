@@ -144,27 +144,36 @@ class TwitterOAuthManager:
         Returns:
             str: رابط المصادقة
         """
+        print(f"🔍 DEBUG: بدء get_simple_oauth_url")
         if not self.client_id:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
         try:
             oauth = self._create_oauth_handler()
             auth_url = oauth.get_authorization_url()
+            print(f"🔍 DEBUG: auth_url: {auth_url}")
             
             # استخراج state من الرابط وحفظه
             from urllib.parse import urlparse, parse_qs
             parsed = urlparse(auth_url)
             query_params = parse_qs(parsed.query)
+            print(f"🔍 DEBUG: query_params من auth_url: {query_params}")
+            
             if 'state' in query_params:
                 state = query_params['state'][0]
+                print(f"🔍 DEBUG: حفظ state في oauth_states: {state}")
                 self.oauth_states[state] = {
                     "timestamp": int(time.time()),
                     "oauth_handler": oauth
                 }
+                print(f"🔍 DEBUG: oauth_states بعد الحفظ: {list(self.oauth_states.keys())}")
+            else:
+                print(f"❌ DEBUG: لا يوجد state في auth_url!")
             
             return auth_url
             
         except Exception as e:
+            print(f"❌ DEBUG: خطأ في get_simple_oauth_url: {str(e)}")
             raise ValueError(f"خطأ في إنشاء رابط المصادقة: {str(e)}")
     
     def get_public_oauth_url(self) -> str:
@@ -333,8 +342,13 @@ class TwitterOAuthManager:
         Returns:
             Dict: نتيجة المصادقة
         """
+        print(f"🔍 DEBUG: بدء handle_callback - state: {state}")
+        print(f"🔍 DEBUG: callback_url: {callback_url}")
+        print(f"🔍 DEBUG: oauth_states المتاحة: {list(self.oauth_states.keys())}")
+        
         # التحقق من صحة الحالة
         if state not in self.oauth_states:
+            print(f"❌ DEBUG: state غير موجود في oauth_states")
             return {
                 "success": False,
                 "error": "حالة OAuth غير صالحة"
@@ -342,24 +356,43 @@ class TwitterOAuthManager:
         
         oauth_data = self.oauth_states[state]
         username = oauth_data.get("username")  # استخدام get بدلاً من [] لمنع KeyError
+        print(f"🔍 DEBUG: oauth_data: {oauth_data}")
+        print(f"🔍 DEBUG: username من oauth_data: {username}")
         
         try:
             # استخدام OAuth handler المحفوظ أو إنشاء جديد
             oauth = oauth_data.get("oauth_handler") or self._create_oauth_handler()
+            print(f"🔍 DEBUG: محاولة fetch_token في handle_callback...")
             tokens = oauth.fetch_token(callback_url)
+            print(f"🔍 DEBUG: تم الحصول على tokens: {list(tokens.keys()) if tokens else 'None'}")
             
             # إنشاء client للحصول على معلومات المستخدم
             access_token = tokens["access_token"]
+            print(f"🔍 DEBUG: access_token نوع: {type(access_token)}, قيمة: {access_token[:20] if access_token else 'None'}...")
             if not access_token:
                 return {"success": False, "error": "Access token فارغ من Twitter"}
-            client = tweepy.Client(
-                bearer_token=access_token,
-                consumer_key=None,
-                consumer_secret=None,
-                access_token=None,
-                access_token_secret=None
-            )
-            user_info = client.get_me(user_auth=True).data
+            
+            print(f"🔍 DEBUG: محاولة إنشاء tweepy.Client في handle_callback...")
+            try:
+                client = tweepy.Client(
+                    bearer_token=access_token,
+                    consumer_key=None,
+                    consumer_secret=None,
+                    access_token=None,
+                    access_token_secret=None
+                )
+                print(f"🔍 DEBUG: تم إنشاء Client بنجاح في handle_callback")
+            except Exception as client_error:
+                print(f"❌ DEBUG: خطأ في إنشاء Client في handle_callback: {str(client_error)}")
+                return {"success": False, "error": f"خطأ في إنشاء Twitter Client: {str(client_error)}"}
+            
+            print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم في handle_callback...")
+            try:
+                user_info = client.get_me(user_auth=True).data
+                print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح في handle_callback")
+            except Exception as user_error:
+                print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم في handle_callback: {str(user_error)}")
+                return {"success": False, "error": f"خطأ في الحصول على معلومات المستخدم: {str(user_error)}"}
             
             # اشتقاق username من Twitter عند غيابه
             resolved_username = getattr(user_info, 'username', None)
@@ -402,6 +435,10 @@ class TwitterOAuthManager:
                 }
                 
         except Exception as e:
+            print(f"❌ DEBUG: خطأ في handle_callback: {str(e)}")
+            print(f"❌ DEBUG: نوع الخطأ: {type(e).__name__}")
+            import traceback
+            print(f"❌ DEBUG: تفاصيل الخطأ:\n{traceback.format_exc()}")
             return {
                 "success": False,
                 "error": f"خطأ في المصادقة: {str(e)}"

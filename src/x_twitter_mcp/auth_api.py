@@ -799,12 +799,19 @@ async def oauth_callback(
         print(f"🔍 DEBUG: callback_url كامل: {callback_url}")
         
         if state:
-            # استخدام username محدد
-            print(f"🔍 DEBUG: استخدام handle_callback مع state")
-            result = oauth_manager.handle_callback(callback_url, state)
+            # التحقق من وجود username في oauth_states
+            oauth_data = oauth_manager.oauth_states.get(state, {})
+            if oauth_data.get("username"):
+                # استخدام username محدد
+                print(f"🔍 DEBUG: استخدام handle_callback مع state و username")
+                result = oauth_manager.handle_callback(callback_url, state)
+            else:
+                # استخدام الرابط العام (لا يوجد username محدد)
+                print(f"🔍 DEBUG: استخدام handle_public_callback (state موجود لكن لا username)")
+                result = oauth_manager.handle_public_callback(callback_url)
         else:
             # استخدام الرابط العام
-            print(f"🔍 DEBUG: استخدام handle_public_callback")
+            print(f"🔍 DEBUG: استخدام handle_public_callback (لا state)")
             result = oauth_manager.handle_public_callback(callback_url)
         
         print(f"🔍 DEBUG: نتيجة المعالجة: {result.get('success', 'Unknown')}")
