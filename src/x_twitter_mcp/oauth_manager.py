@@ -1,7 +1,6 @@
 import os
 import time
 import secrets
-import sqlite3
 import tweepy
 from typing import Optional, Dict, Tuple
 from .database import db_manager
@@ -26,9 +25,6 @@ class TwitterOAuthManager:
         self.scopes = ["tweet.read", "tweet.write", "users.read", "offline.access"]
         self.token_url = "https://api.twitter.com/2/oauth2/token"
         
-        # قاعدة بيانات SQLite للـ tokens
-        self.db_path = "oauth_tokens.db"
-        
         # قاعدة بيانات للجلسات المؤقتة
         self.oauth_states = {}
         
@@ -37,61 +33,30 @@ class TwitterOAuthManager:
             print("⚠️  تحذير: TWITTER_CLIENT_ID غير محدد")
             print("💡 تأكد من إعداد ملف .env أو متغيرات البيئة")
         
-        # إنشاء جدول قاعدة البيانات
-        self._init_db()
-        
-    def _init_db(self):
-        """إنشاء جدول قاعدة البيانات للـ tokens"""
-        con = sqlite3.connect(self.db_path)
-        con.execute("""
-            CREATE TABLE IF NOT EXISTS oauth_tokens (
-                id INTEGER PRIMARY KEY,
-                username TEXT UNIQUE,
-                access_token TEXT,
-                refresh_token TEXT,
-                expires_at INTEGER,
-                scope TEXT
-            )
-        """)
-        con.commit()
-        con.close()
-    
-    def _db_query(self, query: str, *args):
-        """تنفيذ استعلام قاعدة البيانات"""
-        con = sqlite3.connect(self.db_path)
-        cur = con.execute(query, args)
-        con.commit()
-        result = cur.fetchone()
-        con.close()
-        return result
-    
     def save_tokens(self, username: str, tokens: dict):
-        """حفظ الـ tokens في قاعدة البيانات"""
-        expires_at = int(time.time()) + int(tokens.get("expires_in", 0))
-        scope = " ".join(tokens.get("scope", self.scopes))
-        
-        self._db_query(
-            "INSERT OR REPLACE INTO oauth_tokens(username, access_token, refresh_token, expires_at, scope) VALUES(?, ?, ?, ?, ?)",
-            username,
-            tokens["access_token"],
-            tokens.get("refresh_token"),
-            expires_at,
-            scope
-        )
+        """حفظ الـ tokens في قاعدة البيانات الرئيسية"""
+        account = db_manager.get_account(username)
+        if account:
+            db_manager.add_account(
+                username=username,
+                api_key=account.api_key,
+                api_secret=account.api_secret,
+                access_token=tokens["access_token"],
+                access_token_secret=account.access_token_secret,
+                bearer_token=tokens["access_token"],
+                refresh_token=tokens.get("refresh_token"),
+                display_name=account.display_name
+            )
     
     def load_tokens(self, username: str) -> Optional[dict]:
-        """تحميل الـ tokens من قاعدة البيانات"""
-        result = self._db_query(
-            "SELECT access_token, refresh_token, expires_at, scope FROM oauth_tokens WHERE username = ?",
-            username
-        )
-        
-        if result:
+        """تحميل الـ tokens من قاعدة البيانات الرئيسية"""
+        account = db_manager.get_account(username)
+        if account and account.refresh_token:
             return {
-                "access_token": result[0],
-                "refresh_token": result[1],
-                "expires_at": result[2],
-                "scope": result[3].split()
+                "access_token": account.access_token,
+                "refresh_token": account.refresh_token,
+                "expires_at": int(time.time()) + 7200,  # ساعتان افتراضياً
+                "scope": self.scopes
             }
         return None
     
@@ -101,18 +66,12 @@ class TwitterOAuthManager:
         return state
     
     def _create_oauth_handler(self):
-        """إنشاء OAuth2UserHandler مع إعدادات التحديث التلقائي"""
+        """إنشاء OAuth2UserHandler"""
         return tweepy.OAuth2UserHandler(
             client_id=self.client_id,
             redirect_uri=self.redirect_uri,
             scope=self.scopes,
-            client_secret=self.client_secret,
-            auto_refresh_url=self.token_url,
-            auto_refresh_kwargs={
-                "client_id": self.client_id,
-                "client_secret": self.client_secret
-            },
-            token_updater=lambda tokens: None  # سيتم تحديثه لاحقاً
+            client_secret=self.client_secret
         )
     
     def get_client(self, username: str) -> Optional[tweepy.Client]:
