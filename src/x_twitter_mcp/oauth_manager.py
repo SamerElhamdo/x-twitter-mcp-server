@@ -145,21 +145,26 @@ class TwitterOAuthManager:
         if not self.client_id:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
-        # إنشاء حالة OAuth
-        state = self.generate_oauth_state()
-        
         try:
             oauth = self._create_oauth_handler()
             redirect_url = oauth.get_authorization_url()
             
-            # حفظ الحالة مع اسم المستخدم
-            self.oauth_states[state] = {
-                "username": username,
-                "timestamp": int(time.time()),
-                "oauth_handler": oauth
-            }
+            # استخراج state الحقيقي من redirect_url
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(redirect_url)
+            query_params = parse_qs(parsed.query)
             
-            return redirect_url, state
+            if 'state' in query_params:
+                real_state = query_params['state'][0]
+                # حفظ الحالة الحقيقية مع اسم المستخدم
+                self.oauth_states[real_state] = {
+                    "username": username,
+                    "timestamp": int(time.time()),
+                    "oauth_handler": oauth
+                }
+                return redirect_url, real_state
+            else:
+                raise ValueError("لم يتم العثور على state في رابط المصادقة")
             
         except Exception as e:
             raise ValueError(f"خطأ في إنشاء رابط المصادقة: {str(e)}")
@@ -258,7 +263,7 @@ class TwitterOAuthManager:
             }
         
         oauth_data = self.oauth_states[state]
-        username = oauth_data["username"]
+        username = oauth_data.get("username")  # استخدام get بدلاً من [] لمنع KeyError
         
         try:
             # استخدام OAuth handler المحفوظ أو إنشاء جديد
@@ -268,6 +273,16 @@ class TwitterOAuthManager:
             # إنشاء client للحصول على معلومات المستخدم
             client = tweepy.Client(tokens["access_token"])
             user_info = client.get_me(user_auth=True).data
+            
+            # اشتقاق username من Twitter عند غيابه
+            resolved_username = getattr(user_info, 'username', None)
+            if not username:
+                if not resolved_username:
+                    return {
+                        "success": False,
+                        "error": "تعذر تحديد اسم المستخدم (username) من الحالة أو من Twitter"
+                    }
+                username = resolved_username
             
             # حفظ الـ tokens
             self.save_tokens(username, tokens)
