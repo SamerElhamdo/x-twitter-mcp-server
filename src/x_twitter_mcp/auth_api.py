@@ -1281,7 +1281,7 @@ async def tool_retweet(request: TweetActionRequest):
     try:
         from .server import initialize_twitter_clients
         client, _ = initialize_twitter_clients(request.username)
-        result = client.retweet(tweet_id=request.tweet_id, user_auth=False)
+        result = client.retweet(tweet_id=request.tweet_id, user_auth=True)
         return {
             "success": True,
             "tweet_id": request.tweet_id,
@@ -1297,7 +1297,7 @@ async def tool_unretweet(request: TweetActionRequest):
     try:
         from .server import initialize_twitter_clients
         client, _ = initialize_twitter_clients(request.username)
-        result = client.unretweet(tweet_id=request.tweet_id, user_auth=False)
+        result = client.unretweet(tweet_id=request.tweet_id, user_auth=True)
         return {
             "success": True,
             "tweet_id": request.tweet_id,

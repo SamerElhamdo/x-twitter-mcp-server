@@ -133,8 +133,13 @@ class TwitterOAuthManager:
             raise ValueError(f"Access token فارغ أو None للحساب {username}")
         
         # إنشاء Client مع OAuth 2.0 User Access Token
+        # للحصول على OAuth 2.0 User Context، نستخدم access_token مباشرة
         try:
-            return tweepy.Client(bearer_token=access_token)
+            # OAuth 2.0 User Context: تمرير access_token للمستخدم
+            return tweepy.Client(
+                access_token=access_token,  # OAuth 2.0 User Access Token
+                wait_on_rate_limit=True
+            )
         except Exception as e:
             raise ValueError(f"فشل في إنشاء Twitter client للحساب {username}: {str(e)}")
     

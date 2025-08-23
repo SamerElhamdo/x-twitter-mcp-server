@@ -550,6 +550,29 @@ async def delete_all_bookmarks(username: str) -> Dict:
         client.remove_bookmark(tweet_id=bookmark.id, user_auth=True)
     return {"status": "all bookmarks deleted"}
 
+@server.tool(name="debug_auth_context", description="Debug current auth context")
+async def debug_auth_context(username: str) -> Dict:
+    """Debug current OAuth 2.0 authentication context.
+    
+    Args:
+        username (str): Your Twitter username (stored in database)
+    """
+    try:
+        client, _ = initialize_twitter_clients(username)
+        me = client.get_me(user_auth=True)
+        return {
+            "user_auth_ok": True, 
+            "me_id": me.data.id, 
+            "me_username": me.data.username,
+            "auth_type": "OAuth 2.0 User Context"
+        }
+    except Exception as e:
+        return {
+            "user_auth_ok": False, 
+            "error": str(e),
+            "hint": "تأكد من إعادة التفويض مع السكوبات الجديدة"
+        }
+
 @server.tool(name="retweet", description="Retweet a tweet")
 async def retweet(tweet_id: str, username: str) -> Dict:
     """Retweets a tweet.
@@ -561,7 +584,7 @@ async def retweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    result = client.retweet(tweet_id=tweet_id, user_auth=False)
+    result = client.retweet(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "retweeted": result.data["retweeted"]}
 
 @server.tool(name="unretweet", description="Unretweet a tweet")
@@ -575,7 +598,7 @@ async def unretweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    result = client.unretweet(tweet_id=tweet_id, user_auth=False)
+    result = client.unretweet(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "retweeted": not result.data["retweeted"]}
 
 # Timeline & Search Tools
