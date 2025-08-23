@@ -37,6 +37,7 @@ class TwitterOAuthManager:
         """حفظ الـ tokens في قاعدة البيانات الرئيسية"""
         account = db_manager.get_account(username)
         if account:
+            # تحديث حساب موجود
             db_manager.add_account(
                 username=username,
                 api_key=account.api_key or "",  # ضمان سلسلة نصية بدل None
@@ -47,14 +48,26 @@ class TwitterOAuthManager:
                 refresh_token=tokens.get("refresh_token", ""),  # ضمان سلسلة نصية
                 display_name=account.display_name or username
             )
+        else:
+            # إنشاء حساب جديد - OAuth 2.0 فقط
+            db_manager.add_account(
+                username=username,
+                api_key="",  # OAuth 2.0 لا يستخدم API key
+                api_secret="",  # OAuth 2.0 لا يستخدم API secret
+                access_token=tokens["access_token"],
+                access_token_secret="",  # OAuth 2.0 لا يستخدم access_token_secret
+                bearer_token=tokens["access_token"],  # Bearer Token صريح
+                refresh_token=tokens.get("refresh_token", ""),  # ضمان سلسلة نصية
+                display_name=username  # استخدام username كـ display_name افتراضي
+            )
     
     def load_tokens(self, username: str) -> Optional[dict]:
         """تحميل الـ tokens من قاعدة البيانات الرئيسية"""
         account = db_manager.get_account(username)
-        if account and account.refresh_token:
+        if account and account.access_token:
             return {
                 "access_token": account.access_token,
-                "refresh_token": account.refresh_token,
+                "refresh_token": account.refresh_token or "",  # قد يكون فارغاً
                 "expires_at": int(time.time()) + 7200,  # ساعتان افتراضياً
                 "scope": self.scopes
             }

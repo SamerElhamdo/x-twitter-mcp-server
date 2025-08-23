@@ -1490,7 +1490,7 @@ async def quick_test_account(username: str):
             client, v1_api = initialize_twitter_clients(username)
             
             # محاولة الحصول على معلومات المستخدم
-            me = client.get_me()
+            me = client.get_me(user_auth=True)
             
             if me.data:
                 return {
