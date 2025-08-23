@@ -255,8 +255,16 @@ class TwitterOAuthManager:
                 oauth = self._create_oauth_handler()
             
             print(f"🔍 DEBUG: محاولة fetch_token...")
-            tokens = oauth.fetch_token(callback_url)
-            print(f"🔍 DEBUG: تم الحصول على tokens: {list(tokens.keys()) if tokens else 'None'}")
+            try:
+                print(f"🔍 DEBUG: استدعاء oauth.fetch_token()...")
+                tokens = oauth.fetch_token(callback_url)
+                print(f"🔍 DEBUG: تم الحصول على tokens: {list(tokens.keys()) if tokens else 'None'}")
+                print(f"🔍 DEBUG: نوع tokens: {type(tokens)}")
+            except Exception as fetch_error:
+                print(f"❌ DEBUG: خطأ في fetch_token: {str(fetch_error)}")
+                import traceback
+                print(f"❌ DEBUG: تفاصيل خطأ fetch_token:\n{traceback.format_exc()}")
+                return {"success": False, "error": f"خطأ في fetch_token: {str(fetch_error)}"}
             
             # إنشاء client للحصول على معلومات المستخدم
             access_token = tokens["access_token"]
@@ -265,7 +273,9 @@ class TwitterOAuthManager:
                 return {"success": False, "error": "Access token فارغ من Twitter"}
             
             print(f"🔍 DEBUG: محاولة إنشاء tweepy.Client...")
+            print(f"🔍 DEBUG: المعاملات - bearer_token: {access_token[:10]}...")
             try:
+                print(f"🔍 DEBUG: استدعاء tweepy.Client()...")
                 client = tweepy.Client(
                     bearer_token=access_token,
                     consumer_key=None,
@@ -273,18 +283,28 @@ class TwitterOAuthManager:
                     access_token=None,
                     access_token_secret=None
                 )
-                print(f"🔍 DEBUG: تم إنشاء Client بنجاح")
+                print(f"🔍 DEBUG: تم إنشاء Client بنجاح، نوع: {type(client)}")
+                print(f"🔍 DEBUG: خصائص Client: bearer_token={hasattr(client, 'bearer_token')}")
             except Exception as client_error:
                 print(f"❌ DEBUG: خطأ في إنشاء Client: {str(client_error)}")
+                import traceback
+                print(f"❌ DEBUG: تفاصيل خطأ إنشاء Client:\n{traceback.format_exc()}")
                 return {"success": False, "error": f"خطأ في إنشاء Twitter Client: {str(client_error)}"}
             
             print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم...")
             try:
-                # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
-                user_info = client.get_me().data
+                print(f"🔍 DEBUG: استدعاء client.get_me()...")
+                me_response = client.get_me()
+                print(f"🔍 DEBUG: تم استدعاء client.get_me() بنجاح، نوع الاستجابة: {type(me_response)}")
+                
+                print(f"🔍 DEBUG: محاولة الوصول لـ .data...")
+                user_info = me_response.data
+                print(f"🔍 DEBUG: تم الحصول على .data بنجاح، نوع البيانات: {type(user_info)}")
                 print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح")
             except Exception as user_error:
                 print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم: {str(user_error)}")
+                import traceback
+                print(f"❌ DEBUG: تفاصيل الخطأ الكاملة:\n{traceback.format_exc()}")
                 return {"success": False, "error": f"خطأ في الحصول على معلومات المستخدم: {str(user_error)}"}
             
             # استخدام username من Twitter
