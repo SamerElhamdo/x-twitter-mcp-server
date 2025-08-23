@@ -45,14 +45,20 @@ class TwitterOAuthManager:
     def load_tokens(self, username: str) -> Optional[dict]:
         """تحميل الـ tokens من قاعدة البيانات الرئيسية"""
         account = db_manager.get_account(username)
-        if account and account.access_token:
-            return {
-                "access_token": account.access_token,
-                "refresh_token": account.refresh_token or "",  # قد يكون فارغاً
-                "expires_at": int(time.time()) + 7200,  # ساعتان افتراضياً
-                "scope": self.scopes
-            }
-        return None
+        if not account:
+            print(f"⚠️ لم يتم العثور على الحساب: {username}")
+            return None
+        
+        if not account.access_token:
+            print(f"⚠️ Access token فارغ للحساب: {username}")
+            return None
+            
+        return {
+            "access_token": account.access_token,
+            "refresh_token": account.refresh_token or "",  # قد يكون فارغاً
+            "expires_at": int(time.time()) + 7200,  # ساعتان افتراضياً
+            "scope": self.scopes
+        }
     
     def generate_oauth_state(self) -> str:
         """إنشاء حالة OAuth عشوائية"""
@@ -100,7 +106,21 @@ class TwitterOAuthManager:
                 print(f"خطأ في تحديث الـ token: {str(e)}")
                 return None
         
-        return tweepy.Client(bearer_token=tokens["access_token"])
+        access_token = tokens["access_token"]
+        if not access_token or access_token.strip() == "":
+            raise ValueError(f"Access token فارغ أو None للحساب {username}")
+        
+        # إنشاء Client مع Bearer Token صريح فقط
+        try:
+            return tweepy.Client(
+                bearer_token=access_token,
+                consumer_key=None,  # منع استخدام OAuth 1.0a
+                consumer_secret=None,
+                access_token=None,  # منع الخلط مع OAuth 1.0a access_token
+                access_token_secret=None
+            )
+        except Exception as e:
+            raise ValueError(f"فشل في إنشاء Twitter client للحساب {username}: {str(e)}")
     
     def get_simple_oauth_url(self) -> str:
         """إنشاء رابط OAuth 2.0 للمصادقة
@@ -203,7 +223,16 @@ class TwitterOAuthManager:
             tokens = oauth.fetch_token(callback_url)
             
             # إنشاء client للحصول على معلومات المستخدم
-            client = tweepy.Client(bearer_token=tokens["access_token"])
+            access_token = tokens["access_token"]
+            if not access_token:
+                return {"success": False, "error": "Access token فارغ من Twitter"}
+            client = tweepy.Client(
+                bearer_token=access_token,
+                consumer_key=None,
+                consumer_secret=None,
+                access_token=None,
+                access_token_secret=None
+            )
             user_info = client.get_me(user_auth=True).data
             
             # استخدام username من Twitter
@@ -274,7 +303,16 @@ class TwitterOAuthManager:
             tokens = oauth.fetch_token(callback_url)
             
             # إنشاء client للحصول على معلومات المستخدم
-            client = tweepy.Client(bearer_token=tokens["access_token"])
+            access_token = tokens["access_token"]
+            if not access_token:
+                return {"success": False, "error": "Access token فارغ من Twitter"}
+            client = tweepy.Client(
+                bearer_token=access_token,
+                consumer_key=None,
+                consumer_secret=None,
+                access_token=None,
+                access_token_secret=None
+            )
             user_info = client.get_me(user_auth=True).data
             
             # اشتقاق username من Twitter عند غيابه

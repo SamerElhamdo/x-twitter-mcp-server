@@ -100,28 +100,28 @@ class DatabaseManager:
                 
                 if existing:
                     # تحديث الحساب الموجود
-                    existing.access_token = access_token
-                    existing.refresh_token = refresh_token
+                    existing.access_token = access_token or ""
+                    existing.refresh_token = refresh_token or ""
                     existing.display_name = display_name or username
                     existing.last_used = datetime.utcnow()
                     existing.is_active = True
-                    # حقول التوافق
+                    # حقول التوافق - ضمان عدم وجود None
                     existing.api_key = ""
                     existing.api_secret = ""
                     existing.access_token_secret = ""
-                    existing.bearer_token = access_token
+                    existing.bearer_token = access_token or ""
                 else:
                     # إنشاء حساب جديد
                     new_account = TwitterAccount(
                         username=username,
-                        access_token=access_token,
-                        refresh_token=refresh_token,
+                        access_token=access_token or "",
+                        refresh_token=refresh_token or "",
                         display_name=display_name or username,
-                        # حقول التوافق
+                        # حقول التوافق - ضمان عدم وجود None
                         api_key="",
                         api_secret="",
                         access_token_secret="",
-                        bearer_token=access_token
+                        bearer_token=access_token or ""
                     )
                     session.add(new_account)
                 
@@ -144,6 +144,20 @@ class DatabaseManager:
                     # تحديث آخر استخدام
                     account.last_used = datetime.utcnow()
                     session.commit()
+                    
+                    # التأكد من عدم وجود قيم None في الحقول المهمة
+                    if account.access_token is None:
+                        account.access_token = ""
+                    if account.refresh_token is None:
+                        account.refresh_token = ""
+                    if account.api_key is None:
+                        account.api_key = ""
+                    if account.api_secret is None:
+                        account.api_secret = ""
+                    if account.access_token_secret is None:
+                        account.access_token_secret = ""
+                    if account.bearer_token is None:
+                        account.bearer_token = account.access_token or ""
                     
                     # إرجاع نسخة نظيفة من الكائن
                     return account.copy()
