@@ -1487,7 +1487,7 @@ async def quick_test_account(username: str):
         
         try:
             # تهيئة عملاء Twitter
-            client, v1_api = initialize_twitter_clients(username)
+            client, _ = initialize_twitter_clients(username)
             
             # محاولة الحصول على معلومات المستخدم
             me = client.get_me(user_auth=True)
@@ -1543,7 +1543,7 @@ async def mcp_post_tweet(request: Request):
         
         try:
             # تهيئة عملاء Twitter
-            client, v1_api = initialize_twitter_clients(username)
+            client, _ = initialize_twitter_clients(username)
             
             # إنشاء التغريدة
             tweet_data = {"text": text}
