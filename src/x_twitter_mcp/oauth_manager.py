@@ -126,9 +126,10 @@ class TwitterOAuthManager:
         if not access_token or access_token.strip() == "":
             raise ValueError(f"Access token فارغ أو None للحساب {username}")
         
-        # إنشاء Client مع Bearer Token فقط (OAuth 2.0)
+        # إنشاء Client مع OAuth 2.0 User Access Token
         try:
-            return tweepy.Client(bearer_token=access_token)
+            # استخدام access_token كـ OAuth 2.0 user token (وليس bearer_token)
+            return tweepy.Client(access_token=access_token)
         except Exception as e:
             raise ValueError(f"فشل في إنشاء Twitter client للحساب {username}: {str(e)}")
     
@@ -287,11 +288,11 @@ class TwitterOAuthManager:
             
             print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم...")
             try:
-                # استخدام Bearer Token authentication صراحة
-                print(f"🔍 DEBUG: استدعاء client.get_me() مع Bearer Token...")
-                # إنشاء client جديد مع Bearer Token فقط
-                bearer_client = tweepy.Client(bearer_token=access_token)
-                me_response = bearer_client.get_me()
+                # استخدام OAuth 2.0 User Access Token
+                print(f"🔍 DEBUG: استدعاء client.get_me() مع OAuth 2.0 User Token...")
+                # إنشاء client جديد مع OAuth 2.0 user access token
+                user_client = tweepy.Client(access_token=access_token)
+                me_response = user_client.get_me()
                 print(f"🔍 DEBUG: تم استدعاء client.get_me() بنجاح، نوع الاستجابة: {type(me_response)}")
                 
                 print(f"🔍 DEBUG: محاولة الوصول لـ .data...")
@@ -406,10 +407,9 @@ class TwitterOAuthManager:
             
             print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم في handle_callback...")
             try:
-                # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
-                # استخدام Bearer Token authentication صراحة
-                bearer_client = tweepy.Client(bearer_token=tokens["access_token"])
-                user_info = bearer_client.get_me().data
+                # استخدام OAuth 2.0 User Access Token
+                user_client = tweepy.Client(access_token=tokens["access_token"])
+                user_info = user_client.get_me().data
                 print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح في handle_callback")
             except Exception as user_error:
                 print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم في handle_callback: {str(user_error)}")
@@ -479,7 +479,7 @@ class TwitterOAuthManager:
             if not client:
                 return None
             
-            # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
+            # استخدام OAuth 2.0 User Access Token (client مُنشأ بالفعل بـ access_token)
             user_info = client.get_me().data
             return {
                 "id": getattr(user_info, 'id', ''),
