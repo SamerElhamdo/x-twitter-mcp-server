@@ -318,7 +318,7 @@ async def post_tweet(
         # للآن، نتجاهل الوسائط أو نعرض رسالة تحذير
         logger.warning("رفع الوسائط غير مدعوم حالياً مع OAuth 2.0. سيتم تجاهل الوسائط.")
         # يمكن إضافة دعم الوسائط لاحقاً عبر v1.1 API منفصل
-    tweet = client.create_tweet(user_auth=False, **tweet_data)
+    tweet = client.create_tweet(user_auth=True, **tweet_data)
     logger.info(f"Type of response from client.create_tweet: {type(tweet)}; Content: {tweet}")
     return tweet.data
 
@@ -333,10 +333,7 @@ async def delete_tweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    result = client.delete_tweet(id=tweet_id, user_id=me.id)
+    result = client.delete_tweet(id=tweet_id, user_auth=True)
     return {"id": tweet_id, "deleted": result.data["deleted"]}
 
 @server.tool(name="get_tweet_details", description="Get detailed information about a specific tweet")
@@ -374,7 +371,7 @@ async def create_poll_tweet(
         "poll_options": choices,
         "poll_duration_minutes": duration_minutes
     }
-    tweet = client.create_tweet(user_auth=False, **poll_data)
+    tweet = client.create_tweet(user_auth=True, **poll_data)
     return tweet.data
 
 @server.tool(name="vote_on_poll", description="Vote on a poll (mocked)")
@@ -402,10 +399,7 @@ async def favorite_tweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    result = client.like(tweet_id=tweet_id, user_id=me.id)
+    result = client.like(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "liked": result.data["liked"]}
 
 @server.tool(name="unfavorite_tweet", description="Unfavorites a tweet")
@@ -419,10 +413,7 @@ async def unfavorite_tweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    result = client.unlike(tweet_id=tweet_id, user_id=me.id)
+    result = client.unlike(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "liked": not result.data["liked"]}
 
 @server.tool(name="bookmark_tweet", description="Adds the tweet to bookmarks")
@@ -441,10 +432,7 @@ async def bookmark_tweet(
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    result = client.bookmark(tweet_id=tweet_id, user_id=me.id)
+    result = client.bookmark(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "bookmarked": result.data["bookmarked"]}
 
 @server.tool(name="delete_bookmark", description="Removes the tweet from bookmarks")
@@ -458,10 +446,7 @@ async def delete_bookmark(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    result = client.remove_bookmark(tweet_id=tweet_id, user_id=me.id)
+    result = client.remove_bookmark(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "bookmarked": not result.data["bookmarked"]}
 
 @server.tool(name="delete_all_bookmarks", description="Deletes all bookmarks (simulated)")
@@ -475,13 +460,10 @@ async def delete_all_bookmarks(username: str) -> Dict:
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
     
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    
     # Twitter API v2 doesn't have a direct endpoint; simulate by fetching and removing
-    bookmarks = client.get_bookmarks(user_id=me.id, user_auth=False)
-    for bookmark in bookmarks.data:
-        client.remove_bookmark(tweet_id=bookmark["id"], user_id=me.id)
+    bookmarks = client.get_bookmarks(user_auth=True)
+    for bookmark in (bookmarks.data or []):      # bookmark هو Tweet
+        client.remove_bookmark(tweet_id=bookmark.id, user_auth=True)
     return {"status": "all bookmarks deleted"}
 
 @server.tool(name="retweet", description="Retweet a tweet")
@@ -495,10 +477,7 @@ async def retweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    result = client.retweet(tweet_id=tweet_id, user_id=me.id)
+    result = client.retweet(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "retweeted": result.data["retweeted"]}
 
 @server.tool(name="unretweet", description="Unretweet a tweet")
@@ -512,10 +491,7 @@ async def unretweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    
-    # الحصول على user_id للمستخدم المُصادِق (OAuth 2.0)
-    me = client.get_me(user_auth=False).data
-    result = client.unretweet(tweet_id=tweet_id, user_id=me.id)
+    result = client.unretweet(tweet_id=tweet_id, user_auth=True)
     return {"tweet_id": tweet_id, "retweeted": not result.data["retweeted"]}
 
 # Timeline & Search Tools
