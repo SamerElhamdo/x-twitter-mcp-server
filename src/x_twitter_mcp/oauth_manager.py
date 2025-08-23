@@ -408,8 +408,8 @@ class TwitterOAuthManager:
             try:
                 # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
                 # استخدام Bearer Token authentication صراحة
-            bearer_client = tweepy.Client(bearer_token=tokens["access_token"])
-            user_info = bearer_client.get_me().data
+                bearer_client = tweepy.Client(bearer_token=tokens["access_token"])
+                user_info = bearer_client.get_me().data
                 print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح في handle_callback")
             except Exception as user_error:
                 print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم في handle_callback: {str(user_error)}")
@@ -480,9 +480,7 @@ class TwitterOAuthManager:
                 return None
             
             # استخدام Bearer Token فقط (OAuth 2.0) - لا user_auth=True
-            # استخدام Bearer Token authentication صراحة
-            bearer_client = tweepy.Client(bearer_token=tokens["access_token"])
-            user_info = bearer_client.get_me().data
+            user_info = client.get_me().data
             return {
                 "id": getattr(user_info, 'id', ''),
                 "username": getattr(user_info, 'username', ''),
