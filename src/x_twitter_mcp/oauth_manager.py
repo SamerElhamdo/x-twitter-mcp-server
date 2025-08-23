@@ -67,24 +67,40 @@ class TwitterOAuthManager:
     
     def _create_oauth_handler(self):
         """إنشاء OAuth2UserHandler - يدعم PKCE والتطبيقات السرية"""
-        # للتطبيقات العامة (PKCE): client_secret فارغ أو غير محدد
-        # للتطبيقات السرية (Confidential): client_secret محدد
-        if self.client_secret:
-            # تطبيق سري (Confidential App)
-            return tweepy.OAuth2UserHandler(
-                client_id=self.client_id,
-                redirect_uri=self.redirect_uri,
-                scope=self.scopes,
-                client_secret=self.client_secret
-            )
-        else:
-            # تطبيق عام (Public App with PKCE)
-            return tweepy.OAuth2UserHandler(
-                client_id=self.client_id,
-                redirect_uri=self.redirect_uri,
-                scope=self.scopes
-                # لا client_secret للـ PKCE
-            )
+        print(f"🔍 DEBUG: إنشاء OAuth handler...")
+        print(f"🔍 DEBUG: client_id: {'موجود' if self.client_id else 'فارغ'}")
+        print(f"🔍 DEBUG: client_secret: {'موجود' if self.client_secret else 'فارغ'}")
+        print(f"🔍 DEBUG: redirect_uri: {self.redirect_uri}")
+        print(f"🔍 DEBUG: scopes: {self.scopes}")
+        
+        try:
+            # للتطبيقات العامة (PKCE): client_secret فارغ أو غير محدد
+            # للتطبيقات السرية (Confidential): client_secret محدد
+            if self.client_secret:
+                # تطبيق سري (Confidential App)
+                print(f"🔍 DEBUG: إنشاء Confidential App handler")
+                handler = tweepy.OAuth2UserHandler(
+                    client_id=self.client_id,
+                    redirect_uri=self.redirect_uri,
+                    scope=self.scopes,
+                    client_secret=self.client_secret
+                )
+            else:
+                # تطبيق عام (Public App with PKCE)
+                print(f"🔍 DEBUG: إنشاء Public App (PKCE) handler")
+                handler = tweepy.OAuth2UserHandler(
+                    client_id=self.client_id,
+                    redirect_uri=self.redirect_uri,
+                    scope=self.scopes
+                    # لا client_secret للـ PKCE
+                )
+            
+            print(f"🔍 DEBUG: تم إنشاء OAuth handler بنجاح")
+            return handler
+            
+        except Exception as e:
+            print(f"❌ DEBUG: خطأ في إنشاء OAuth handler: {str(e)}")
+            raise
     
     def get_client(self, username: str) -> Optional[tweepy.Client]:
         """إنشاء Twitter client مع auto-refresh للـ tokens"""
@@ -204,36 +220,62 @@ class TwitterOAuthManager:
         Returns:
             Dict: نتيجة المصادقة
         """
+        print(f"🔍 DEBUG: بدء معالجة callback: {callback_url}")
         try:
             # استخراج state من callback_url
             from urllib.parse import urlparse, parse_qs
             parsed = urlparse(callback_url)
             query_params = parse_qs(parsed.query)
+            print(f"🔍 DEBUG: معاملات الـ callback: {query_params}")
             
             oauth = None
             if 'state' in query_params:
                 state = query_params['state'][0]
+                print(f"🔍 DEBUG: state موجود: {state}")
                 if state in self.oauth_states:
                     oauth = self.oauth_states[state].get("oauth_handler")
+                    print(f"🔍 DEBUG: تم العثور على OAuth handler محفوظ")
+                else:
+                    print(f"🔍 DEBUG: state غير موجود في oauth_states")
+            else:
+                print(f"🔍 DEBUG: لا يوجد state في المعاملات")
             
             # استخدام OAuth handler المحفوظ أو إنشاء جديد
             if not oauth:
+                print(f"🔍 DEBUG: إنشاء OAuth handler جديد")
                 oauth = self._create_oauth_handler()
             
+            print(f"🔍 DEBUG: محاولة fetch_token...")
             tokens = oauth.fetch_token(callback_url)
+            print(f"🔍 DEBUG: تم الحصول على tokens: {list(tokens.keys()) if tokens else 'None'}")
             
             # إنشاء client للحصول على معلومات المستخدم
             access_token = tokens["access_token"]
+            print(f"🔍 DEBUG: access_token نوع: {type(access_token)}, قيمة: {access_token[:20] if access_token else 'None'}...")
             if not access_token:
                 return {"success": False, "error": "Access token فارغ من Twitter"}
-            client = tweepy.Client(
-                bearer_token=access_token,
-                consumer_key=None,
-                consumer_secret=None,
-                access_token=None,
-                access_token_secret=None
-            )
-            user_info = client.get_me(user_auth=True).data
+            
+            print(f"🔍 DEBUG: محاولة إنشاء tweepy.Client...")
+            try:
+                client = tweepy.Client(
+                    bearer_token=access_token,
+                    consumer_key=None,
+                    consumer_secret=None,
+                    access_token=None,
+                    access_token_secret=None
+                )
+                print(f"🔍 DEBUG: تم إنشاء Client بنجاح")
+            except Exception as client_error:
+                print(f"❌ DEBUG: خطأ في إنشاء Client: {str(client_error)}")
+                return {"success": False, "error": f"خطأ في إنشاء Twitter Client: {str(client_error)}"}
+            
+            print(f"🔍 DEBUG: محاولة الحصول على معلومات المستخدم...")
+            try:
+                user_info = client.get_me(user_auth=True).data
+                print(f"🔍 DEBUG: تم الحصول على معلومات المستخدم بنجاح")
+            except Exception as user_error:
+                print(f"❌ DEBUG: خطأ في الحصول على معلومات المستخدم: {str(user_error)}")
+                return {"success": False, "error": f"خطأ في الحصول على معلومات المستخدم: {str(user_error)}"}
             
             # استخدام username من Twitter
             twitter_username = getattr(user_info, 'username', None)
@@ -272,6 +314,10 @@ class TwitterOAuthManager:
                 }
                 
         except Exception as e:
+            print(f"❌ DEBUG: خطأ في handle_public_callback: {str(e)}")
+            print(f"❌ DEBUG: نوع الخطأ: {type(e).__name__}")
+            import traceback
+            print(f"❌ DEBUG: تفاصيل الخطأ:\n{traceback.format_exc()}")
             return {
                 "success": False,
                 "error": f"خطأ في المصادقة: {str(e)}"

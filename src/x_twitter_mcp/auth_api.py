@@ -792,16 +792,22 @@ async def oauth_callback(
     state: str = Query(None, description="حالة OAuth (اختياري)")
 ):
     """معالجة callback من Twitter OAuth 2.0"""
+    print(f"🔍 DEBUG: وصل callback - code: {code[:10] if code else 'None'}..., state: {state}")
     try:
         # الحصول على الرابط الكامل للـ callback
         callback_url = str(request.url)
+        print(f"🔍 DEBUG: callback_url كامل: {callback_url}")
         
         if state:
             # استخدام username محدد
+            print(f"🔍 DEBUG: استخدام handle_callback مع state")
             result = oauth_manager.handle_callback(callback_url, state)
         else:
             # استخدام الرابط العام
+            print(f"🔍 DEBUG: استخدام handle_public_callback")
             result = oauth_manager.handle_public_callback(callback_url)
+        
+        print(f"🔍 DEBUG: نتيجة المعالجة: {result.get('success', 'Unknown')}")
         
         if result["success"]:
             # صفحة نجاح
@@ -865,6 +871,11 @@ async def oauth_callback(
             return HTMLResponse(content=html_content)
             
     except Exception as e:
+        print(f"❌ DEBUG: خطأ في oauth_callback: {str(e)}")
+        print(f"❌ DEBUG: نوع الخطأ: {type(e).__name__}")
+        import traceback
+        print(f"❌ DEBUG: تفاصيل الخطأ:\n{traceback.format_exc()}")
+        
         return HTMLResponse(content=f"""
         <!DOCTYPE html>
         <html dir="rtl" lang="ar">
@@ -873,8 +884,14 @@ async def oauth_callback(
             <title>خطأ</title>
         </head>
         <body>
-            <h1>خطأ</h1>
-            <p>{str(e)}</p>
+            <h1>خطأ في المصادقة</h1>
+            <p><strong>الخطأ:</strong> {str(e)}</p>
+            <p><strong>نوع الخطأ:</strong> {type(e).__name__}</p>
+            <details>
+                <summary>تفاصيل تقنية</summary>
+                <pre>{traceback.format_exc()}</pre>
+            </details>
+            <a href="/">العودة للصفحة الرئيسية</a>
         </body>
         </html>
         """)
