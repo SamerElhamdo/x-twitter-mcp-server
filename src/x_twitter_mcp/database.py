@@ -26,6 +26,7 @@ class TwitterAccount(Base):
     access_token = Column(String, nullable=False)
     access_token_secret = Column(String, nullable=False)
     bearer_token = Column(String, nullable=False)
+    refresh_token = Column(String, nullable=True)  # OAuth 2.0 refresh token
     display_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_used = Column(DateTime, default=datetime.utcnow)
@@ -48,7 +49,8 @@ class TwitterAccount(Base):
             "api_secret": self.api_secret,
             "access_token": self.access_token,
             "access_token_secret": self.access_token_secret,
-            "bearer_token": self.bearer_token
+            "bearer_token": self.bearer_token,
+            "refresh_token": self.refresh_token
         }
     
     def copy(self):
@@ -60,6 +62,7 @@ class TwitterAccount(Base):
             access_token=self.access_token,
             access_token_secret=self.access_token_secret,
             bearer_token=self.bearer_token,
+            refresh_token=self.refresh_token,
             display_name=self.display_name,
             created_at=self.created_at,
             last_used=self.last_used,
@@ -83,7 +86,7 @@ class DatabaseManager:
     
     def add_account(self, username: str, api_key: str, api_secret: str, 
                    access_token: str, access_token_secret: str, bearer_token: str,
-                   display_name: Optional[str] = None) -> bool:
+                   display_name: Optional[str] = None, refresh_token: Optional[str] = None) -> bool:
         """إضافة حساب Twitter جديد"""
         try:
             with self.get_session() as session:
@@ -99,6 +102,7 @@ class DatabaseManager:
                     existing.access_token = access_token
                     existing.access_token_secret = access_token_secret
                     existing.bearer_token = bearer_token
+                    existing.refresh_token = refresh_token
                     existing.display_name = display_name or username
                     existing.last_used = datetime.utcnow()
                     existing.is_active = True
@@ -111,6 +115,7 @@ class DatabaseManager:
                         access_token=access_token,
                         access_token_secret=access_token_secret,
                         bearer_token=bearer_token,
+                        refresh_token=refresh_token,
                         display_name=display_name or username
                     )
                     session.add(new_account)
@@ -194,25 +199,10 @@ class DatabaseManager:
     def test_credentials(self, username: str) -> bool:
         """اختبار صحة مفاتيح المصادقة"""
         try:
-            account = self.get_account(username)
-            if not account:
-                return False
-            
-            # استيراد tweepy هنا لتجنب التبعيات الدائرية
-            import tweepy
-            
-            # اختبار الاتصال
-            client = tweepy.Client(
-                consumer_key=account.api_key,
-                consumer_secret=account.api_secret,
-                access_token=account.access_token,
-                access_token_secret=account.access_token_secret,
-                bearer_token=account.bearer_token
-            )
-            
-            # محاولة الحصول على معلومات المستخدم
-            user = client.get_me()
-            return user.data is not None
+            # استخدام oauth_manager للاختبار مع OAuth 2.0
+            from .oauth_manager import oauth_manager
+            user_info = oauth_manager.get_user_info(username)
+            return user_info is not None
             
         except Exception as e:
             print(f"خطأ في اختبار المفاتيح: {e}")

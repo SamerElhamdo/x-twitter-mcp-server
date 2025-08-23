@@ -28,6 +28,7 @@ class AccountCreate(BaseModel):
     access_token: str
     access_token_secret: str
     bearer_token: str
+    refresh_token: Optional[str] = None
     display_name: Optional[str] = None
 
 class AccountResponse(BaseModel):
@@ -43,6 +44,7 @@ class AccountUpdate(BaseModel):
     access_token: Optional[str] = None
     access_token_secret: Optional[str] = None
     bearer_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     display_name: Optional[str] = None
 
 class TestCredentialsResponse(BaseModel):
@@ -793,18 +795,21 @@ async def redirect_to_twitter():
 # نقطة نهاية Callback
 @auth_app.get("/auth/callback")
 async def oauth_callback(
-    oauth_token: str = Query(..., description="رمز OAuth من Twitter"),
-    oauth_verifier: str = Query(..., description="رمز التحقق من Twitter"),
+    request: Request,
+    code: str = Query(..., description="Authorization code من Twitter"),
     state: str = Query(None, description="حالة OAuth (اختياري)")
 ):
-    """معالجة callback من Twitter OAuth 1.0a"""
+    """معالجة callback من Twitter OAuth 2.0"""
     try:
+        # الحصول على الرابط الكامل للـ callback
+        callback_url = str(request.url)
+        
         if state:
             # استخدام username محدد
-            result = oauth_manager.handle_callback(oauth_token, oauth_verifier, state)
+            result = oauth_manager.handle_callback(callback_url, state)
         else:
             # استخدام الرابط العام
-            result = oauth_manager.handle_public_callback(oauth_token, oauth_verifier)
+            result = oauth_manager.handle_public_callback(callback_url)
         
         if result["success"]:
             # صفحة نجاح
@@ -894,6 +899,7 @@ async def create_account(account: AccountCreate):
             access_token=account.access_token,
             access_token_secret=account.access_token_secret,
             bearer_token=account.bearer_token,
+            refresh_token=account.refresh_token,
             display_name=account.display_name
         )
         
@@ -954,6 +960,8 @@ async def update_account(username: str, update_data: AccountUpdate):
             current_account.access_token_secret = update_data.access_token_secret
         if update_data.bearer_token is not None:
             current_account.bearer_token = update_data.bearer_token
+        if update_data.refresh_token is not None:
+            current_account.refresh_token = update_data.refresh_token
         if update_data.display_name is not None:
             current_account.display_name = update_data.display_name
         

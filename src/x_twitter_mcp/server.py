@@ -22,34 +22,33 @@ server = FastMCP(name="TwitterMCPServer")
 auth_server_thread = start_auth_server(host="127.0.0.1", port=8000)
 
 def initialize_twitter_clients(username: str) -> tuple[tweepy.Client, tweepy.API]:
-    """Initialize Twitter API clients using stored credentials."""
+    """Initialize Twitter API clients using OAuth 2.0."""
     
-    # الحصول على الحساب من قاعدة البيانات
-    account = db_manager.get_account(username)
-    if not account:
-        raise ValueError(f"الحساب '{username}' غير موجود أو غير نشط. يرجى إضافته أولاً عبر واجهة API المصادقة.")
+    # استخدام oauth_manager للحصول على client
+    from .oauth_manager import oauth_manager
     
-    # التحقق من صحة المفاتيح
-    if not db_manager.test_credentials(username):
-        raise ValueError(f"مفاتيح المصادقة للحساب '{username}' غير صحيحة. يرجى تحديثها.")
+    # الحصول على Twitter client مع auto-refresh
+    twitter_client = oauth_manager.get_client(username)
+    if not twitter_client:
+        raise ValueError(f"فشل في إنشاء client للحساب '{username}'. تأكد من إضافة الحساب أولاً عبر واجهة المصادقة.")
     
-    # Initialize v2 API client
-    twitter_client = tweepy.Client(
-        consumer_key=account.api_key,
-        consumer_secret=account.api_secret,
-        access_token=account.access_token,
-        access_token_secret=account.access_token_secret,
-        bearer_token=account.bearer_token
-    )
-
-    # Initialize v1.1 API for media uploads and other unsupported v2 endpoints
-    auth = tweepy.OAuth1UserHandler(
-        consumer_key=account.api_key,
-        consumer_secret=account.api_secret,
-        access_token=account.access_token,
-        access_token_secret=account.access_token_secret
-    )
-    twitter_v1_api = tweepy.API(auth)
+    # للتوافق مع الكود الموجود، سنحاول إنشاء v1.1 API إذا كانت المفاتيح متوفرة
+    twitter_v1_api = None
+    try:
+        account = db_manager.get_account(username)
+        if account and account.api_key and account.api_secret:
+            # إنشاء v1.1 API للـ media uploads إذا كانت المفاتيح متوفرة
+            auth = tweepy.OAuth1UserHandler(
+                consumer_key=account.api_key,
+                consumer_secret=account.api_secret,
+                access_token=account.access_token,
+                access_token_secret=account.access_token_secret
+            )
+            twitter_v1_api = tweepy.API(auth)
+    except Exception as e:
+        logger.warning(f"لا يمكن إنشاء v1.1 API للحساب '{username}': {e}")
+        # OAuth 2.0 pure - لا نحتاج v1.1 API للعمليات الأساسية
+        pass
 
     return twitter_client, twitter_v1_api
 
@@ -88,6 +87,7 @@ async def add_twitter_account(
     access_token: str,
     access_token_secret: str,
     bearer_token: str,
+    refresh_token: Optional[str] = None,
     display_name: Optional[str] = None
 ) -> Dict:
     """Add a new Twitter account to the database for future use.
@@ -99,6 +99,7 @@ async def add_twitter_account(
         access_token (str): Twitter Access Token
         access_token_secret (str): Twitter Access Token Secret
         bearer_token (str): Twitter Bearer Token
+        refresh_token (Optional[str]): OAuth 2.0 Refresh Token
         display_name (Optional[str]): Display name for the account
     """
     try:
@@ -109,6 +110,7 @@ async def add_twitter_account(
             access_token=access_token,
             access_token_secret=access_token_secret,
             bearer_token=bearer_token,
+            refresh_token=refresh_token,
             display_name=display_name
         )
         
