@@ -107,7 +107,20 @@ class TwitterOAuthManager:
         
         try:
             oauth = self._create_oauth_handler()
-            return oauth.get_authorization_url()
+            auth_url = oauth.get_authorization_url()
+            
+            # استخراج state من الرابط وحفظه
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(auth_url)
+            query_params = parse_qs(parsed.query)
+            if 'state' in query_params:
+                state = query_params['state'][0]
+                self.oauth_states[state] = {
+                    "timestamp": int(time.time()),
+                    "oauth_handler": oauth
+                }
+            
+            return auth_url
             
         except Exception as e:
             raise ValueError(f"خطأ في إنشاء رابط المصادقة: {str(e)}")
@@ -161,8 +174,21 @@ class TwitterOAuthManager:
             Dict: نتيجة المصادقة
         """
         try:
-            # إنشاء OAuth handler وجلب الـ tokens
-            oauth = self._create_oauth_handler()
+            # استخراج state من callback_url
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(callback_url)
+            query_params = parse_qs(parsed.query)
+            
+            oauth = None
+            if 'state' in query_params:
+                state = query_params['state'][0]
+                if state in self.oauth_states:
+                    oauth = self.oauth_states[state].get("oauth_handler")
+            
+            # استخدام OAuth handler المحفوظ أو إنشاء جديد
+            if not oauth:
+                oauth = self._create_oauth_handler()
+            
             tokens = oauth.fetch_token(callback_url)
             
             # إنشاء client للحصول على معلومات المستخدم
@@ -192,6 +218,12 @@ class TwitterOAuthManager:
             )
             
             if success:
+                # تنظيف state إذا كان موجوداً
+                if 'state' in query_params:
+                    state = query_params['state'][0]
+                    if state in self.oauth_states:
+                        del self.oauth_states[state]
+                
                 return {
                     "success": True,
                     "message": f"تم إضافة الحساب '@{twitter_username}' بنجاح",
