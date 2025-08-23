@@ -32,23 +32,9 @@ def initialize_twitter_clients(username: str) -> tuple[tweepy.Client, tweepy.API
     if not twitter_client:
         raise ValueError(f"فشل في إنشاء client للحساب '{username}'. تأكد من إضافة الحساب أولاً عبر واجهة المصادقة.")
     
-    # للتوافق مع الكود الموجود، سنحاول إنشاء v1.1 API إذا كانت المفاتيح متوفرة
+    # OAuth 2.0 pure - لا نحتاج v1.1 API
+    # جميع العمليات تتم عبر OAuth 2.0 فقط
     twitter_v1_api = None
-    try:
-        account = db_manager.get_account(username)
-        if account and account.api_key and account.api_secret:
-            # إنشاء v1.1 API للـ media uploads إذا كانت المفاتيح متوفرة
-            auth = tweepy.OAuth1UserHandler(
-                consumer_key=account.api_key,
-                consumer_secret=account.api_secret,
-                access_token=account.access_token,
-                access_token_secret=account.access_token_secret
-            )
-            twitter_v1_api = tweepy.API(auth)
-    except Exception as e:
-        logger.warning(f"لا يمكن إنشاء v1.1 API للحساب '{username}': {e}")
-        # OAuth 2.0 pure - لا نحتاج v1.1 API للعمليات الأساسية
-        pass
 
     return twitter_client, twitter_v1_api
 

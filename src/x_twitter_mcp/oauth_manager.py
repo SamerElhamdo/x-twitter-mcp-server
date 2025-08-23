@@ -39,13 +39,13 @@ class TwitterOAuthManager:
         if account:
             db_manager.add_account(
                 username=username,
-                api_key=account.api_key,
-                api_secret=account.api_secret,
+                api_key=account.api_key or "",  # ضمان سلسلة نصية بدل None
+                api_secret=account.api_secret or "",  # ضمان سلسلة نصية بدل None
                 access_token=tokens["access_token"],
-                access_token_secret=account.access_token_secret,
-                bearer_token=tokens["access_token"],
-                refresh_token=tokens.get("refresh_token"),
-                display_name=account.display_name
+                access_token_secret=account.access_token_secret or "",
+                bearer_token=tokens["access_token"],  # Bearer Token صريح
+                refresh_token=tokens.get("refresh_token", ""),  # ضمان سلسلة نصية
+                display_name=account.display_name or username
             )
     
     def load_tokens(self, username: str) -> Optional[dict]:
@@ -66,13 +66,25 @@ class TwitterOAuthManager:
         return state
     
     def _create_oauth_handler(self):
-        """إنشاء OAuth2UserHandler"""
-        return tweepy.OAuth2UserHandler(
-            client_id=self.client_id,
-            redirect_uri=self.redirect_uri,
-            scope=self.scopes,
-            client_secret=self.client_secret
-        )
+        """إنشاء OAuth2UserHandler - يدعم PKCE والتطبيقات السرية"""
+        # للتطبيقات العامة (PKCE): client_secret فارغ أو غير محدد
+        # للتطبيقات السرية (Confidential): client_secret محدد
+        if self.client_secret:
+            # تطبيق سري (Confidential App)
+            return tweepy.OAuth2UserHandler(
+                client_id=self.client_id,
+                redirect_uri=self.redirect_uri,
+                scope=self.scopes,
+                client_secret=self.client_secret
+            )
+        else:
+            # تطبيق عام (Public App with PKCE)
+            return tweepy.OAuth2UserHandler(
+                client_id=self.client_id,
+                redirect_uri=self.redirect_uri,
+                scope=self.scopes
+                # لا client_secret للـ PKCE
+            )
     
     def get_client(self, username: str) -> Optional[tweepy.Client]:
         """إنشاء Twitter client مع auto-refresh للـ tokens"""
@@ -94,7 +106,7 @@ class TwitterOAuthManager:
                 print(f"خطأ في تحديث الـ token: {str(e)}")
                 return None
         
-        return tweepy.Client(tokens["access_token"])
+        return tweepy.Client(bearer_token=tokens["access_token"])
     
     def get_simple_oauth_url(self) -> str:
         """إنشاء رابط OAuth 2.0 للمصادقة
@@ -197,7 +209,7 @@ class TwitterOAuthManager:
             tokens = oauth.fetch_token(callback_url)
             
             # إنشاء client للحصول على معلومات المستخدم
-            client = tweepy.Client(tokens["access_token"])
+            client = tweepy.Client(bearer_token=tokens["access_token"])
             user_info = client.get_me(user_auth=True).data
             
             # استخدام username من Twitter
@@ -215,10 +227,11 @@ class TwitterOAuthManager:
             success = db_manager.add_account(
                 username=twitter_username,
                 api_key="",  # OAuth 2.0 لا يستخدم API key
-                api_secret="",
+                api_secret="",  # OAuth 2.0 لا يستخدم API secret
                 access_token=tokens["access_token"],
-                access_token_secret=tokens.get("refresh_token", ""),
-                bearer_token=tokens["access_token"],
+                access_token_secret="",  # OAuth 2.0 لا يستخدم access_token_secret
+                bearer_token=tokens["access_token"],  # Bearer Token صريح
+                refresh_token=tokens.get("refresh_token", ""),  # ضمان سلسلة نصية
                 display_name=getattr(user_info, 'name', twitter_username)
             )
             
@@ -271,7 +284,7 @@ class TwitterOAuthManager:
             tokens = oauth.fetch_token(callback_url)
             
             # إنشاء client للحصول على معلومات المستخدم
-            client = tweepy.Client(tokens["access_token"])
+            client = tweepy.Client(bearer_token=tokens["access_token"])
             user_info = client.get_me(user_auth=True).data
             
             # اشتقاق username من Twitter عند غيابه
@@ -291,10 +304,11 @@ class TwitterOAuthManager:
             success = db_manager.add_account(
                 username=username,
                 api_key="",  # OAuth 2.0 لا يستخدم API key
-                api_secret="",
+                api_secret="",  # OAuth 2.0 لا يستخدم API secret
                 access_token=tokens["access_token"],
-                access_token_secret=tokens.get("refresh_token", ""),
-                bearer_token=tokens["access_token"],
+                access_token_secret="",  # OAuth 2.0 لا يستخدم access_token_secret
+                bearer_token=tokens["access_token"],  # Bearer Token صريح
+                refresh_token=tokens.get("refresh_token", ""),  # ضمان سلسلة نصية
                 display_name=getattr(user_info, 'name', username)
             )
             
