@@ -557,20 +557,56 @@ async def debug_auth_context(username: str) -> Dict:
     Args:
         username (str): Your Twitter username (stored in database)
     """
+    from .database import db_manager
+    
+    # التحقق من وجود الحساب في قاعدة البيانات
+    account = db_manager.get_account(username)
+    if not account:
+        return {
+            "user_auth_ok": False,
+            "error": "Account not found in database",
+            "hint": f"الحساب {username} غير موجود في قاعدة البيانات. أضفه أولاً عبر واجهة المصادقة."
+        }
+    
+    # التحقق من وجود التوكنات
+    debug_info = {
+        "account_found": True,
+        "username": username,
+        "has_access_token": bool(account.access_token and account.access_token.strip()),
+        "has_refresh_token": bool(account.refresh_token and account.refresh_token.strip()),
+        "access_token_preview": account.access_token[:20] + "..." if account.access_token else "None",
+    }
+    
+    if not debug_info["has_access_token"]:
+        return {
+            **debug_info,
+            "user_auth_ok": False,
+            "error": "No access token found",
+            "hint": "لا يوجد access_token للحساب. أعد التفويض عبر /accounts/{username}/reauthorize"
+        }
+    
+    # اختبار إنشاء العميل
     try:
         client, _ = initialize_twitter_clients(username)
+        debug_info["client_created"] = True
+        
+        # اختبار استدعاء get_me
         me = client.get_me(user_auth=True)
         return {
+            **debug_info,
             "user_auth_ok": True, 
             "me_id": me.data.id, 
             "me_username": me.data.username,
-            "auth_type": "OAuth 2.0 User Context"
+            "auth_type": "OAuth 2.0 User Context",
+            "message": "✅ OAuth 2.0 User Context يعمل بشكل صحيح!"
         }
     except Exception as e:
         return {
+            **debug_info,
             "user_auth_ok": False, 
             "error": str(e),
-            "hint": "تأكد من إعادة التفويض مع السكوبات الجديدة"
+            "error_type": type(e).__name__,
+            "hint": "إذا كان الخطأ 'Consumer key must be string or bytes', فالعميل لا يحمل OAuth 2.0 User tokens بشكل صحيح"
         }
 
 @server.tool(name="retweet", description="Retweet a tweet")

@@ -19,6 +19,7 @@ class TwitterOAuthManager:
         # متغيرات OAuth 2.0
         self.client_id = os.getenv("TWITTER_CLIENT_ID", "")
         self.client_secret = os.getenv("TWITTER_CLIENT_SECRET", "")
+        self.bearer_token = os.getenv("TWITTER_BEARER_TOKEN", "")  # Bearer Token للتطبيق (اختياري)
         self.redirect_uri = os.getenv("TWITTER_REDIRECT_URI", "http://localhost:8000/auth/callback")
         
         # الصلاحيات المطلوبة (محدثة لتشمل like و bookmark)
@@ -133,11 +134,16 @@ class TwitterOAuthManager:
             raise ValueError(f"Access token فارغ أو None للحساب {username}")
         
         # إنشاء Client مع OAuth 2.0 User Access Token
-        # للحصول على OAuth 2.0 User Context، نستخدم access_token مباشرة
+        # للحصول على OAuth 2.0 User Context، نحتاج المعاملات الصحيحة
         try:
-            # OAuth 2.0 User Context: تمرير access_token للمستخدم
+            # OAuth 2.0 User Context: المعاملات الضرورية
             return tweepy.Client(
+                # OAuth 2.0 User tokens
                 access_token=access_token,  # OAuth 2.0 User Access Token
+                refresh_token=tokens.get("refresh_token"),  # للتحديث التلقائي
+                client_id=self.client_id,  # للتحديث التلقائي
+                client_secret=self.client_secret if self.client_secret else None,  # إذا كان Confidential App
+                bearer_token=self.bearer_token if self.bearer_token else None,  # Bearer Token للتطبيق (اختياري)
                 wait_on_rate_limit=True
             )
         except Exception as e:
