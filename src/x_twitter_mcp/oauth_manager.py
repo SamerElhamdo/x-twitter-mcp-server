@@ -89,41 +89,37 @@ class TwitterOAuthManager:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
         try:
-            # استخدام Tweepy OAuth 2.0 مع PKCE
-            # Twitter API v2 يتطلب PKCE
-            # client_secret اختياري - لا نحتاجه إلا إذا كان confidential client
-            oauth2_handler = OAuth2UserHandler(
-                client_id=self.client_id,
-                redirect_uri=self.redirect_uri,
-                scope=self.scopes
-            )
+            # إنشاء OAuth 2.0 PKCE يدوياً بدلاً من استخدام Tweepy
+            # هذا يعطينا تحكم كامل في state و code_verifier
+            import base64
+            import hashlib
+            import urllib.parse
             
-            # إنشاء state أولاً
+            # إنشاء state و code_verifier يدوياً
             state = self.generate_oauth_state()
+            code_verifier = self.generate_oauth_state() + self.generate_oauth_state()  # أطول للـ PKCE
+            
+            # إنشاء code_challenge من code_verifier
+            code_challenge = base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode('utf-8')).digest()
+            ).decode('utf-8').rstrip('=')
+            
             print(f"🔑 [get_simple_oauth_url] State المُنشأ: {state}")
+            print(f"🔐 [get_simple_oauth_url] Code Verifier: {code_verifier[:20]}...")
+            print(f"🔐 [get_simple_oauth_url] Code Challenge: {code_challenge[:20]}...")
             
-            # إنشاء رابط المصادقة مع PKCE
-            # OAuth2UserHandler يدعم PKCE تلقائياً
-            # Twitter API v2 يتطلب PKCE
-            # تمرير state مخصص إلى get_authorization_url
-            auth_url = oauth2_handler.get_authorization_url(state=state)
+            # بناء رابط OAuth 2.0 يدوياً
+            params = {
+                'response_type': 'code',
+                'client_id': self.client_id,
+                'redirect_uri': self.redirect_uri,
+                'scope': ' '.join(self.scopes),
+                'state': state,
+                'code_challenge': code_challenge,
+                'code_challenge_method': 'S256'
+            }
             
-            # استخراج code_verifier من oauth2_handler
-            code_verifier = None
-            
-            # محاولة استخراج code_verifier من oauth2_handler
-            for attr in ["oauth2_session", "_client", "code_verifier"]:
-                try:
-                    obj = getattr(oauth2_handler, attr)
-                    if obj:
-                        # محاولة الحصول على code_verifier
-                        if code_verifier is None:
-                            code_verifier = getattr(obj, "code_verifier", None)
-                            if isinstance(code_verifier, str) and len(code_verifier) >= 43:
-                                break
-                except Exception as e:
-                    print(f"⚠️  [get_simple_oauth_url] فشل في استخراج {attr}: {e}")
-                    continue
+            auth_url = 'https://twitter.com/i/oauth2/authorize?' + urllib.parse.urlencode(params)
             
             if not state:
                 raise ValueError("فشل في إنشاء state")
@@ -197,40 +193,37 @@ class TwitterOAuthManager:
             raise ValueError("TWITTER_CLIENT_ID غير محدد. يرجى إعداده في ملف .env")
         
         try:
-            # استخدام Tweepy OAuth 2.0 مع PKCE
-            # client_secret اختياري - لا نحتاجه إلا إذا كان confidential client
-            oauth2_handler = OAuth2UserHandler(
-                client_id=self.client_id,
-                redirect_uri=self.redirect_uri,
-                scope=self.scopes
-            )
+            # إنشاء OAuth 2.0 PKCE يدوياً بدلاً من استخدام Tweepy
+            # هذا يعطينا تحكم كامل في state و code_verifier
+            import base64
+            import hashlib
+            import urllib.parse
             
-            # إنشاء state أولاً
+            # إنشاء state و code_verifier يدوياً
             state = self.generate_oauth_state()
+            code_verifier = self.generate_oauth_state() + self.generate_oauth_state()  # أطول للـ PKCE
+            
+            # إنشاء code_challenge من code_verifier
+            code_challenge = base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode('utf-8')).digest()
+            ).decode('utf-8').rstrip('=')
+            
             print(f"🔑 [get_authorization_url] State المُنشأ: {state}")
+            print(f"🔐 [get_authorization_url] Code Verifier: {code_verifier[:20]}...")
+            print(f"🔐 [get_authorization_url] Code Challenge: {code_challenge[:20]}...")
             
-            # إنشاء رابط المصادقة مع PKCE
-            # OAuth2UserHandler يدعم PKCE تلقائياً
-            # Twitter API v2 يتطلب PKCE
-            # تمرير state مخصص إلى get_authorization_url
-            redirect_url = oauth2_handler.get_authorization_url(state=state)
+            # بناء رابط OAuth 2.0 يدوياً
+            params = {
+                'response_type': 'code',
+                'client_id': self.client_id,
+                'redirect_uri': self.redirect_uri,
+                'scope': ' '.join(self.scopes),
+                'state': state,
+                'code_challenge': code_challenge,
+                'code_challenge_method': 'S256'
+            }
             
-            # استخراج code_verifier من oauth2_handler
-            code_verifier = None
-            
-            # محاولة استخراج code_verifier من oauth2_handler
-            for attr in ["oauth2_session", "_client", "code_verifier"]:
-                try:
-                    obj = getattr(oauth2_handler, attr)
-                    if obj:
-                        # محاولة الحصول على code_verifier
-                        if code_verifier is None:
-                            code_verifier = getattr(obj, "code_verifier", None)
-                            if isinstance(code_verifier, str) and len(code_verifier) >= 43:
-                                break
-                except Exception as e:
-                    print(f"⚠️  [get_authorization_url] فشل في استخراج {attr}: {e}")
-                    continue
+            redirect_url = 'https://twitter.com/i/oauth2/authorize?' + urllib.parse.urlencode(params)
             
             if not state:
                 raise ValueError("فشل في إنشاء state")
