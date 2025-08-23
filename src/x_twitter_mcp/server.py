@@ -401,7 +401,7 @@ async def favorite_tweet(tweet_id: str, username: str) -> Dict:
     
     client, _ = initialize_twitter_clients(username)
     try:
-        result = client.like(tweet_id=tweet_id, user_auth=True)
+        result = client.like(tweet_id=tweet_id, user_auth=False)
         return {
             "success": True,
             "tweet_id": tweet_id,
@@ -436,7 +436,7 @@ async def unfavorite_tweet(tweet_id: str, username: str) -> Dict:
     
     client, _ = initialize_twitter_clients(username)
     try:
-        result = client.unlike(tweet_id=tweet_id, user_auth=True)
+        result = client.unlike(tweet_id=tweet_id, user_auth=False)
         return {
             "success": True,
             "tweet_id": tweet_id,
@@ -476,7 +476,7 @@ async def bookmark_tweet(
     
     client, _ = initialize_twitter_clients(username)
     try:
-        result = client.bookmark(tweet_id=tweet_id, user_auth=True)
+        result = client.bookmark(tweet_id=tweet_id, user_auth=False)
         return {
             "success": True,
             "tweet_id": tweet_id,
@@ -511,7 +511,7 @@ async def delete_bookmark(tweet_id: str, username: str) -> Dict:
     
     client, _ = initialize_twitter_clients(username)
     try:
-        result = client.remove_bookmark(tweet_id=tweet_id, user_auth=True)
+        result = client.remove_bookmark(tweet_id=tweet_id, user_auth=False)
         return {
             "success": True,
             "tweet_id": tweet_id,
@@ -545,9 +545,9 @@ async def delete_all_bookmarks(username: str) -> Dict:
     client, _ = initialize_twitter_clients(username)
     
     # Twitter API v2 doesn't have a direct endpoint; simulate by fetching and removing
-    bookmarks = client.get_bookmarks(user_auth=True)
+    bookmarks = client.get_bookmarks(user_auth=False)
     for bookmark in (bookmarks.data or []):      # bookmark هو Tweet
-        client.remove_bookmark(tweet_id=bookmark.id, user_auth=True)
+        client.remove_bookmark(tweet_id=bookmark.id, user_auth=False)
     return {"status": "all bookmarks deleted"}
 
 @server.tool(name="debug_auth_context", description="Debug current auth context")
@@ -591,7 +591,7 @@ async def debug_auth_context(username: str) -> Dict:
         debug_info["client_created"] = True
         
         # اختبار استدعاء get_me
-        me = client.get_me(user_auth=True)
+        me = client.get_me(user_auth=False)
         return {
             **debug_info,
             "user_auth_ok": True, 
@@ -620,7 +620,7 @@ async def retweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    result = client.retweet(tweet_id=tweet_id, user_auth=True)
+    result = client.retweet(tweet_id=tweet_id, user_auth=False)
     return {"tweet_id": tweet_id, "retweeted": result.data["retweeted"]}
 
 @server.tool(name="unretweet", description="Unretweet a tweet")
@@ -634,7 +634,7 @@ async def unretweet(tweet_id: str, username: str) -> Dict:
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
     client, _ = initialize_twitter_clients(username)
-    result = client.unretweet(tweet_id=tweet_id, user_auth=True)
+    result = client.unretweet(tweet_id=tweet_id, user_auth=False)
     return {"tweet_id": tweet_id, "retweeted": not result.data["retweeted"]}
 
 # Timeline & Search Tools

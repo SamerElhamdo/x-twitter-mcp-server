@@ -136,16 +136,19 @@ class TwitterOAuthManager:
         # إنشاء Client مع OAuth 2.0 User Access Token
         # للحصول على OAuth 2.0 User Context، نحتاج المعاملات الصحيحة
         try:
-            # OAuth 2.0 User Context: المعاملات الضرورية
-            return tweepy.Client(
-                # OAuth 2.0 User tokens
-                access_token=access_token,  # OAuth 2.0 User Access Token
-                refresh_token=tokens.get("refresh_token"),  # للتحديث التلقائي
-                client_id=self.client_id,  # للتحديث التلقائي
-                client_secret=self.client_secret if self.client_secret else None,  # إذا كان Confidential App
-                bearer_token=self.bearer_token if self.bearer_token else None,  # Bearer Token للتطبيق (اختياري)
+            # OAuth 2.0 User Context: في Tweepy 4.x، نستخدم bearer_token للـ OAuth 2.0
+            # access_token في Client.__init__() مخصص لـ OAuth 1.0a فقط
+            client = tweepy.Client(
+                bearer_token=access_token,  # OAuth 2.0 User Access Token كـ bearer_token
                 wait_on_rate_limit=True
             )
+            
+            # حفظ معلومات إضافية للتحديث اليدوي (إذا احتجناها لاحقاً)
+            client._refresh_token = tokens.get("refresh_token")
+            client._client_id = self.client_id
+            client._client_secret = self.client_secret
+            
+            return client
         except Exception as e:
             raise ValueError(f"فشل في إنشاء Twitter client للحساب {username}: {str(e)}")
     
