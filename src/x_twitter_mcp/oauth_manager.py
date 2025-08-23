@@ -218,12 +218,6 @@ class TwitterOAuthManager:
             )
             
             if success:
-                # تنظيف state إذا كان موجوداً
-                if 'state' in query_params:
-                    state = query_params['state'][0]
-                    if state in self.oauth_states:
-                        del self.oauth_states[state]
-                
                 return {
                     "success": True,
                     "message": f"تم إضافة الحساب '@{twitter_username}' بنجاح",
