@@ -21,8 +21,14 @@ class TwitterOAuthManager:
         self.client_secret = os.getenv("TWITTER_CLIENT_SECRET", "")
         self.redirect_uri = os.getenv("TWITTER_REDIRECT_URI", "http://localhost:8000/auth/callback")
         
-        # الصلاحيات المطلوبة
-        self.scopes = ["tweet.read", "tweet.write", "users.read", "offline.access"]
+        # الصلاحيات المطلوبة (محدثة لتشمل like و bookmark)
+        self.scopes = [
+            "tweet.read", "tweet.write", 
+            "users.read", 
+            "offline.access",
+            "like.read", "like.write",
+            "bookmark.read", "bookmark.write"
+        ]
         self.token_url = "https://api.twitter.com/2/oauth2/token"
         
         # قاعدة بيانات للجلسات المؤقتة

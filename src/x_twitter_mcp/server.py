@@ -398,9 +398,30 @@ async def favorite_tweet(tweet_id: str, username: str) -> Dict:
     """
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
+    
     client, _ = initialize_twitter_clients(username)
-    result = client.like(tweet_id=tweet_id, user_auth=False)
-    return {"tweet_id": tweet_id, "liked": result.data["liked"]}
+    try:
+        result = client.like(tweet_id=tweet_id, user_auth=True)
+        return {
+            "success": True,
+            "tweet_id": tweet_id,
+            "liked": result.data.get("liked", True)
+        }
+    except tweepy.Forbidden as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "Forbidden",
+            "hint": "تحقق من سكوبات OAuth: like.write و like.read، وأعد التفويض. تأكد أيضاً أن التغريدة ليست من حساب محمي أو أنت محظور منه.",
+            "detail": str(e)
+        }
+    except tweepy.TweepyException as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "TweepyException",
+            "detail": str(e)
+        }
 
 @server.tool(name="unfavorite_tweet", description="Unfavorites a tweet")
 async def unfavorite_tweet(tweet_id: str, username: str) -> Dict:
@@ -412,9 +433,30 @@ async def unfavorite_tweet(tweet_id: str, username: str) -> Dict:
     """
     if not check_rate_limit("like_actions"):
         raise Exception("Like action rate limit exceeded")
+    
     client, _ = initialize_twitter_clients(username)
-    result = client.unlike(tweet_id=tweet_id, user_auth=False)
-    return {"tweet_id": tweet_id, "liked": not result.data["liked"]}
+    try:
+        result = client.unlike(tweet_id=tweet_id, user_auth=True)
+        return {
+            "success": True,
+            "tweet_id": tweet_id,
+            "liked": not result.data.get("liked", False)
+        }
+    except tweepy.Forbidden as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "Forbidden",
+            "hint": "تحقق من سكوبات OAuth: like.write و like.read، وأعد التفويض. تأكد أيضاً أن التغريدة ليست من حساب محمي أو أنت محظور منه.",
+            "detail": str(e)
+        }
+    except tweepy.TweepyException as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "TweepyException",
+            "detail": str(e)
+        }
 
 @server.tool(name="bookmark_tweet", description="Adds the tweet to bookmarks")
 async def bookmark_tweet(
@@ -431,9 +473,30 @@ async def bookmark_tweet(
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
+    
     client, _ = initialize_twitter_clients(username)
-    result = client.bookmark(tweet_id=tweet_id, user_auth=False)
-    return {"tweet_id": tweet_id, "bookmarked": result.data["bookmarked"]}
+    try:
+        result = client.bookmark(tweet_id=tweet_id, user_auth=True)
+        return {
+            "success": True,
+            "tweet_id": tweet_id,
+            "bookmarked": result.data.get("bookmarked", True)
+        }
+    except tweepy.Forbidden as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "Forbidden",
+            "hint": "تحقق من سكوبات OAuth: bookmark.write و bookmark.read، وأعد التفويض. تأكد أيضاً أن التغريدة متاحة للعلامات المرجعية.",
+            "detail": str(e)
+        }
+    except tweepy.TweepyException as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "TweepyException",
+            "detail": str(e)
+        }
 
 @server.tool(name="delete_bookmark", description="Removes the tweet from bookmarks")
 async def delete_bookmark(tweet_id: str, username: str) -> Dict:
@@ -445,9 +508,30 @@ async def delete_bookmark(tweet_id: str, username: str) -> Dict:
     """
     if not check_rate_limit("tweet_actions"):
         raise Exception("Tweet action rate limit exceeded")
+    
     client, _ = initialize_twitter_clients(username)
-    result = client.remove_bookmark(tweet_id=tweet_id, user_auth=False)
-    return {"tweet_id": tweet_id, "bookmarked": not result.data["bookmarked"]}
+    try:
+        result = client.remove_bookmark(tweet_id=tweet_id, user_auth=True)
+        return {
+            "success": True,
+            "tweet_id": tweet_id,
+            "bookmarked": not result.data.get("bookmarked", False)
+        }
+    except tweepy.Forbidden as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "Forbidden",
+            "hint": "تحقق من سكوبات OAuth: bookmark.write و bookmark.read، وأعد التفويض. تأكد أيضاً أن التغريدة موجودة في العلامات المرجعية.",
+            "detail": str(e)
+        }
+    except tweepy.TweepyException as e:
+        return {
+            "success": False,
+            "tweet_id": tweet_id,
+            "error": "TweepyException",
+            "detail": str(e)
+        }
 
 @server.tool(name="delete_all_bookmarks", description="Deletes all bookmarks (simulated)")
 async def delete_all_bookmarks(username: str) -> Dict:
@@ -461,9 +545,9 @@ async def delete_all_bookmarks(username: str) -> Dict:
     client, _ = initialize_twitter_clients(username)
     
     # Twitter API v2 doesn't have a direct endpoint; simulate by fetching and removing
-    bookmarks = client.get_bookmarks(user_auth=False)
+    bookmarks = client.get_bookmarks(user_auth=True)
     for bookmark in (bookmarks.data or []):      # bookmark هو Tweet
-        client.remove_bookmark(tweet_id=bookmark.id, user_auth=False)
+        client.remove_bookmark(tweet_id=bookmark.id, user_auth=True)
     return {"status": "all bookmarks deleted"}
 
 @server.tool(name="retweet", description="Retweet a tweet")

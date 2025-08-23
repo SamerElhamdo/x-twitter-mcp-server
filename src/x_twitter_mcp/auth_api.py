@@ -1099,6 +1099,33 @@ async def get_tools():
         "version": "2.0.0"
     }
 
+# نقطة نهاية لإعادة التفويض
+@auth_app.get("/accounts/{username}/reauthorize")
+async def reauthorize_account(username: str):
+    """إعادة التفويض لحساب موجود لإضافة صلاحيات جديدة (like, bookmark)"""
+    try:
+        # التحقق من وجود الحساب
+        account = db_manager.get_account(username)
+        if not account:
+            raise HTTPException(status_code=404, detail="الحساب غير موجود")
+        
+        # إنشاء رابط مصادقة جديد بالسكوبات المحدثة
+        auth_url, state = oauth_manager.get_authorization_url(username)
+        
+        return {
+            "success": True,
+            "auth_url": auth_url,
+            "state": state,
+            "message": f"رابط إعادة التفويض لـ @{username} جاهز",
+            "hint": "هذا الرابط يتضمن الصلاحيات الجديدة: like.read, like.write, bookmark.read, bookmark.write",
+            "scopes": oauth_manager.scopes
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 # نقطة نهاية لاختبار الحساب (اختبار سريع)
 @auth_app.get("/accounts/{username}/quick-test")
 async def quick_test_account(username: str):
@@ -1222,7 +1249,7 @@ async def tool_favorite_tweet(request: TweetActionRequest):
     try:
         from .server import initialize_twitter_clients
         client, _ = initialize_twitter_clients(request.username)
-        result = client.like(tweet_id=request.tweet_id, user_auth=False)
+        result = client.like(tweet_id=request.tweet_id, user_auth=True)
         return {
             "success": True,
             "tweet_id": request.tweet_id,
@@ -1238,7 +1265,7 @@ async def tool_unfavorite_tweet(request: TweetActionRequest):
     try:
         from .server import initialize_twitter_clients
         client, _ = initialize_twitter_clients(request.username)
-        result = client.unlike(tweet_id=request.tweet_id, user_auth=False)
+        result = client.unlike(tweet_id=request.tweet_id, user_auth=True)
         return {
             "success": True,
             "tweet_id": request.tweet_id,
@@ -1326,7 +1353,7 @@ async def tool_bookmark_tweet(request: TweetActionRequest):
     try:
         from .server import initialize_twitter_clients
         client, _ = initialize_twitter_clients(request.username)
-        result = client.bookmark(tweet_id=request.tweet_id, user_auth=False)
+        result = client.bookmark(tweet_id=request.tweet_id, user_auth=True)
         return {
             "success": True,
             "tweet_id": request.tweet_id,
@@ -1342,7 +1369,7 @@ async def tool_remove_bookmark(request: TweetActionRequest):
     try:
         from .server import initialize_twitter_clients
         client, _ = initialize_twitter_clients(request.username)
-        result = client.remove_bookmark(tweet_id=request.tweet_id, user_auth=False)
+        result = client.remove_bookmark(tweet_id=request.tweet_id, user_auth=True)
         return {
             "success": True,
             "tweet_id": request.tweet_id,
