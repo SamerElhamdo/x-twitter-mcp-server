@@ -196,11 +196,11 @@ class TwitterOAuthManager:
             user_info = client.get_me(user_auth=True).data
             
             # استخدام username من Twitter
-            twitter_username = user_info.username
+            twitter_username = getattr(user_info, 'username', None)
             if not twitter_username:
                 return {
                     "success": False,
-                    "error": "لم يتم العثور على username في معلومات المستخدم"
+                    "error": f"لم يتم العثور على username في معلومات المستخدم. البيانات المتاحة: {user_info}"
                 }
             
             # حفظ الـ tokens
@@ -214,7 +214,7 @@ class TwitterOAuthManager:
                 access_token=tokens["access_token"],
                 access_token_secret=tokens.get("refresh_token", ""),
                 bearer_token=tokens["access_token"],
-                display_name=user_info.name or twitter_username
+                display_name=getattr(user_info, 'name', twitter_username)
             )
             
             if success:
@@ -222,9 +222,9 @@ class TwitterOAuthManager:
                     "success": True,
                     "message": f"تم إضافة الحساب '@{twitter_username}' بنجاح",
                     "user_info": {
-                        "username": user_info.username,
-                        "name": user_info.name,
-                        "id": user_info.id
+                        "username": getattr(user_info, 'username', twitter_username),
+                        "name": getattr(user_info, 'name', ''),
+                        "id": getattr(user_info, 'id', '')
                     },
                     "username": twitter_username
                 }
@@ -280,7 +280,7 @@ class TwitterOAuthManager:
                 access_token=tokens["access_token"],
                 access_token_secret=tokens.get("refresh_token", ""),
                 bearer_token=tokens["access_token"],
-                display_name=user_info.name or username
+                display_name=getattr(user_info, 'name', username)
             )
             
             if success:
@@ -291,9 +291,9 @@ class TwitterOAuthManager:
                     "success": True,
                     "message": f"تم إضافة الحساب '{username}' بنجاح",
                     "user_info": {
-                        "username": user_info.username,
-                        "name": user_info.name,
-                        "id": user_info.id
+                        "username": getattr(user_info, 'username', username),
+                        "name": getattr(user_info, 'name', ''),
+                        "id": getattr(user_info, 'id', '')
                     }
                 }
             else:
@@ -324,9 +324,9 @@ class TwitterOAuthManager:
             
             user_info = client.get_me(user_auth=True).data
             return {
-                "id": user_info.id,
-                "username": user_info.username,
-                "name": user_info.name,
+                "id": getattr(user_info, 'id', ''),
+                "username": getattr(user_info, 'username', ''),
+                "name": getattr(user_info, 'name', ''),
                 "verified": getattr(user_info, 'verified', False)
             }
         except Exception as e:
